@@ -1,5 +1,4 @@
-Snellheid Infusdtries Official Internet Website 
-<!doctype html>
+ <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
