@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title data-en="Break Room — Snellheid Industries™" data-nl="Kantine — Snellheid Industries™">Break Room — Snellheid Industries™</title>
+  <meta name="description" content="Survive a meeting that could have been an email, play buzzword bingo, and fly Flappy Snail through your calendar.">
+  <meta property="og:title" content="Break Room — Snellheid Industries™">
+  <meta property="og:description" content="Survive a meeting that could have been an email, play buzzword bingo, and fly Flappy Snail through your calendar.">
+  <meta property="og:image" content="https://www.snellheid.com/assets/img/og.png">
+  <meta name="theme-color" content="#0c3534">
+  <link rel="icon" href="assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/img/favicon-192.png">
+  <link rel="preload" href="assets/fonts/squadaone.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/snellheid.css">
+  <script>(function(){var l;try{l=JSON.parse(localStorage.getItem('snel-lang'))}catch(e){}l=l||((navigator.language||'').toLowerCase().indexOf('nl')===0?'nl':'en');document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l})()</script>
+  <script src="assets/js/core.js" defer></script>
+  <script src="assets/js/dirk.js" defer></script>
+  <script src="assets/js/meeting.js" defer></script>
+  <script src="assets/js/flappy.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+<section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow"><span data-l="en">Break Room</span><span data-l="nl">Kantine</span></span>
+      <h1><span data-l="en">Take a break.<br>(Unpaid.)</span><span data-l="nl">Neem pauze.<br>(Onbetaald.)</span></h1>
+      <p class="lead"><span data-l="en">Our state-of-the-art wellness facility. Features include one banana, a coffee machine that only makes decaf, and two company-mandated games designed to boost morale by 3%.</span><span data-l="nl">Onze ultramoderne welzijnsfaciliteit. Met één banaan, een koffieautomaat die alleen decafé maakt, en twee door het bedrijf verplichte spellen om de moraal met 3% te verhogen.</span></p>
+      <a class="btn hot" href="#meeting"><span data-l="en">Meeting Simulator</span><span data-l="nl">Vergadersimulator</span></a>
+      <a class="btn ghost" href="#flappy-sec">Flappy Snail</a>
+    </div>
+  </section>
+
+  <section id="meeting-sec" style="padding-top:0">
+    <div class="wrap">
+      <div class="toy">
+        <span class="eyebrow"><span data-l="en">Training module 1 of 1</span><span data-l="nl">Trainingsmodule 1 van 1</span></span>
+        <h2><span data-l="en">Survive the Meeting</span><span data-l="nl">Overleef de Vergadering</span></h2>
+        <p><span data-l="en">A 30-minute sync that could have been an email. Keep your sanity above zero, answer questions before they go unanswered, and play buzzword bingo: when someone says a word on your card it glows, then click it. Four in a row wins.</span><span data-l="nl">Een sync van 30 minuten die een mail had kunnen zijn. Houd je verstand boven nul, beantwoord vragen op tijd en speel buzzword-bingo: zegt iemand een woord van je kaart, dan licht het op en klik je erop. Vier op een rij wint.</span></p>
+        <div class="meeting mt-2" id="meeting">
+          <div class="call-window">
+            <div class="call-bar"><span>📹 Q3 Alignment Sync</span><span class="rec">● REC</span><span id="m-clock" class="mono">00:00 / 30:00</span></div>
+            <div class="tiles" id="m-tiles"></div>
+            <div class="chat" id="m-chat" aria-live="polite"><p><i><span data-l="en">Waiting for the host to start this meeting… The host is Chad. Chad is in a cold plunge.</span><span data-l="nl">Wachten tot de host deze vergadering start… De host is Chad. Chad zit in een ijsbad.</span></i></p></div>
+            <div class="choices" id="m-choices"><button class="btn hot" id="m-start"><span data-l="en">Join meeting</span><span data-l="nl">Deelnemen</span></button></div>
+          </div>
+          <div>
+            <div class="meters">
+              <div><label class="mono" style="font-size:.8rem"><span data-l="en">SANITY</span><span data-l="nl">VERSTAND</span></label><div class="meter"><i id="m-sanity"></i></div></div>
+              <div><label class="mono" style="font-size:.8rem"><span data-l="en">SYNERGY</span><span data-l="nl">SYNERGIE</span></label><div class="meter"><i id="m-synergy" style="background:var(--hot)"></i></div></div>
+            </div>
+            <h3 style="margin-top:18px">Buzzword Bingo</h3>
+            <div class="bingo" id="m-bingo"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee peach" aria-hidden="true"><div class="marquee-track"><span>FLAPPY SNAIL</span>★<span>DODGE THE CALENDAR</span>★<span>SHIP THE DELIVERABLES</span>★<span>FLAPPY SNAIL</span>★<span>DODGE THE CALENDAR</span>★<span>SHIP THE DELIVERABLES</span>★<span>FLAPPY SNAIL</span>★<span>DODGE THE CALENDAR</span>★<span>SHIP THE DELIVERABLES</span>★<span>FLAPPY SNAIL</span>★<span>DODGE THE CALENDAR</span>★<span>SHIP THE DELIVERABLES</span>★</div></div>
+
+  <section id="flappy-sec">
+    <div class="wrap">
+      <div class="grid grid-2" style="align-items:center">
+        <div>
+          <span class="eyebrow"><span data-l="en">Mandatory fun</span><span data-l="nl">Verplicht plezier</span></span>
+          <h2>Flappy Snail</h2>
+          <p class="lead"><span data-l="en">You are a snail with a rocket. Your calendar is a wall of meetings. Fly through the gaps. Every five deliverables, the quarter gets faster.</span><span data-l="nl">Je bent een slak met een raket. Je agenda is een muur van vergaderingen. Vlieg door de gaten. Elke vijf deliverables gaat het kwartaal sneller.</span></p>
+          <p><span data-l="en">Your best:</span><span data-l="nl">Jouw record:</span> <b class="display" id="flappy-best" style="font-size:2rem">0</b></p>
+          <p class="fine"><span data-l="en">Tap, click or press Space. Scores of 10+ lift $SNEL. Top performers are rumoured to be recognised in the Employee Portal.</span><span data-l="nl">Tik, klik of druk op spatie. Scores van 10+ tillen $SNEL omhoog. Topprestaties worden naar verluidt erkend in het Medewerkersportaal.</span></p>
+        </div>
+        <div class="game-frame">
+          <canvas id="flappy" width="480" height="640" tabindex="0" aria-label="Flappy Snail game. Press Space or tap to flap."></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="site-footer"></div>
+</body>
+</html>

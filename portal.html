@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title data-en="Employee Portal — Snellheid Industries™" data-nl="Medewerkersportaal — Snellheid Industries™">Employee Portal — Snellheid Industries™</title>
+  <meta name="description" content="Family members only.">
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="Employee Portal — Snellheid Industries™">
+  <meta property="og:description" content="Family members only.">
+  <meta property="og:image" content="https://www.snellheid.com/assets/img/og.png">
+  <meta name="theme-color" content="#0c3534">
+  <link rel="icon" href="assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/img/favicon-192.png">
+  <link rel="preload" href="assets/fonts/squadaone.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/snellheid.css">
+  <script>(function(){var l;try{l=JSON.parse(localStorage.getItem('snel-lang'))}catch(e){}l=l||((navigator.language||'').toLowerCase().indexOf('nl')===0?'nl':'en');document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l})()</script>
+  <script src="assets/js/core.js" defer></script>
+  <script src="assets/js/dirk.js" defer></script>
+  <script src="assets/js/portal.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+<section class="page-hero">
+    <div class="wrap">
+      <div id="gate" class="vault-door card">
+        <div class="dial" aria-hidden="true">🔒</div>
+        <h1 style="font-size:clamp(2.2rem,6vw,3.6rem)"><span data-l="en">Employee Portal</span><span data-l="nl">Medewerkersportaal</span></h1>
+        <p><span data-l="en">Family members only. Enter the codeword. All attempts are logged, printed, and read aloud by Dirk.</span><span data-l="nl">Alleen voor familieleden. Voer het codewoord in. Alle pogingen worden gelogd, geprint en door Dirk voorgelezen.</span></p>
+        <form id="gate-form" class="row" style="justify-content:center">
+          <label for="codeword" class="sr-only">Codeword</label>
+          <input id="codeword" type="password" autocomplete="off" style="max-width:260px" data-en-placeholder="Codeword" data-nl-placeholder="Codewoord" placeholder="Codeword">
+          <button class="btn hot" type="submit"><span data-l="en">Enter</span><span data-l="nl">Betreden</span></button>
+        </form>
+        <p id="gate-msg" aria-live="polite" style="font-weight:700;min-height:1.5em;margin-top:12px"></p>
+        <p class="fine"><span data-l="en">Forgot the codeword? Real insiders know another way in. ↑↑↓↓</span><span data-l="nl">Codewoord vergeten? Echte insiders kennen een andere ingang. ↑↑↓↓</span></p>
+      </div>
+
+      <div id="inside" hidden>
+        <span class="eyebrow">🔓 <span data-l="en">Clearance: Family</span><span data-l="nl">Toegang: Familie</span></span>
+        <h1><span data-l="en">Welcome back,<br>family.</span><span data-l="nl">Welkom terug,<br>familie.</span></h1>
+        <p class="lead"><span data-l="en">You made it past Dirk. Nobody makes it past Dirk. Dirk let you in.</span><span data-l="nl">Je bent langs Dirk gekomen. Niemand komt langs Dirk. Dirk heeft je binnengelaten.</span></p>
+
+        <div class="grid grid-2 mt-2">
+          <div class="card tilt-l">
+            <span class="badge hot">MEMO · <span data-l="en">INTERNAL</span><span data-l="nl">INTERN</span></span>
+            <h3 style="margin-top:12px"><span data-l="en">RE: Return to office</span><span data-l="nl">RE: Terug naar kantoor</span></h3>
+            <p class="mono" style="font-size:.9rem"><span data-l="en">FROM: DIRK<br>TO: EVERYONE<br><br>EFFECTIVE IMMEDIATELY ALL EMPLOYEES WILL RETURN TO THE OFFICE.<br>WE DO NOT HAVE AN OFFICE.<br>FIND ONE.<br><br>I’LL BE BACK.<br>— D.</span><span data-l="nl">VAN: DIRK<br>AAN: IEDEREEN<br><br>PER DIRECT KEERT IEDEREEN TERUG NAAR KANTOOR.<br>WE HEBBEN GEEN KANTOOR.<br>ZOEK ER EEN.<br><br>I’LL BE BACK.<br>— D.</span></p>
+          </div>
+          <div class="card tilt-r">
+            <span class="badge">CLASSIFIED</span>
+            <h3 style="margin-top:12px"><span data-l="en">The real origin story</span><span data-l="nl">Het echte ontstaansverhaal</span></h3>
+            <p><span data-l="en">There was no garage. There was no Stanford. There is no Dirk (don’t tell him). Snellheid started years ago as a joke between a few friends who had heard one “let’s circle back” too many, and decided to build the most corporate company that never existed.</span><span data-l="nl">Er was geen garage. Er was geen Stanford. Er is geen Dirk (niet tegen hem zeggen). Snellheid begon jaren geleden als grap tussen een paar vrienden die één “laten we erop terugkomen” te veel hadden gehoord, en besloten het meest corporate bedrijf te bouwen dat nooit heeft bestaan.</span></p>
+            <p class="mb-0"><b><span data-l="en">Everything on this site is fake, except the friendship. That’s the only KPI that ever went up.</span><span data-l="nl">Alles op deze site is nep, behalve de vriendschap. Dat is de enige KPI die ooit omhoog ging.</span></b></p>
+          </div>
+        </div>
+
+        <div class="card mt-2">
+          <h3><span data-l="en">Dirk Soundboard™</span><span data-l="nl">Dirk-soundboard™</span></h3>
+          <p class="fine"><span data-l="en">Click to hear Dirk. Uses your browser’s voice, which is less Austrian than we’d like.</span><span data-l="nl">Klik om Dirk te horen. Gebruikt de stem van je browser, die minder Oostenrijks is dan we zouden willen.</span></p>
+          <div id="soundboard"></div>
+        </div>
+
+        <div class="grid grid-3 mt-2">
+          <div class="card stat"><span class="num" id="lb-flappy">0</span><span class="label"><span data-l="en">Your Flappy Snail best</span><span data-l="nl">Jouw Flappy Snail-record</span></span></div>
+          <div class="card stat"><span class="num" id="lb-meeting">0</span><span class="label"><span data-l="en">Your best meeting score</span><span data-l="nl">Jouw beste vergaderscore</span></span></div>
+          <div class="card center">
+            <button class="btn hot" id="turbo-btn">TURBO MODE</button>
+            <button class="btn ghost small" id="lock-btn"><span data-l="en">Lock portal</span><span data-l="nl">Portaal vergrendelen</span></button>
+          </div>
+        </div>
+
+        <div class="card mt-2">
+          <h3><span data-l="en">Insider cheat sheet</span><span data-l="nl">Spiekbriefje voor insiders</span></h3>
+          <ul>
+            <li><b>↑ ↑ ↓ ↓ ← → ← → B A</b>: <span data-l="en">Turbo mode, anywhere on the site</span><span data-l="nl">Turbomodus, overal op de site</span></li>
+            <li><span data-l="en">Type</span><span data-l="nl">Typ</span> <b class="mono">choppa</b>, <b class="mono">synergy</b>, <b class="mono">family</b> / <b class="mono">familie</b>, <b class="mono">pivot</b> <span data-l="en">or</span><span data-l="nl">of</span> <b class="mono">illbeback</b> <span data-l="en">on any page</span><span data-l="nl">op een willekeurige pagina</span></li>
+            <li><span data-l="en">Click the logo 7 times</span><span data-l="nl">Klik 7 keer op het logo</span></li>
+            <li><span data-l="en">Sit idle for 90 seconds. Teams notices.</span><span data-l="nl">Doe 90 seconden niets. Teams merkt het.</span></li>
+            <li><span data-l="en">Try to leave the page</span><span data-l="nl">Probeer de pagina te verlaten</span></li>
+            <li><span data-l="en">Open the developer console</span><span data-l="nl">Open de developer console</span></li>
+            <li><span data-l="en">Visit a page that doesn’t exist</span><span data-l="nl">Bezoek een pagina die niet bestaat</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="site-footer"></div>
+</body>
+</html>
