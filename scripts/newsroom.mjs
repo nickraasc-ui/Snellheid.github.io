@@ -32,7 +32,9 @@ const AUTHORS = {
 };
 
 const log = (...a) => console.log('[newsroom]', ...a);
-const req = (name) => { const v = process.env[name]; if (!v) throw new Error(`Missing env ${name}`); return v; };
+const req = (name) => { const v = (process.env[name] || '').trim(); if (!v) throw new Error(`Missing env ${name}`); return v; };
+// Pasted secrets sometimes carry line breaks or a second value; keep only the real key.
+const keyFrom = (name, pattern) => { const v = req(name); return v.split(/\s+/).find((k) => pattern.test(k)) || v.split(/\s+/)[0]; };
 
 function decode(s) {
   return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -62,7 +64,7 @@ async function headlines() {
 }
 
 function sb(path, opts = {}) {
-  const key = req('SUPABASE_SECRET_KEY');
+  const key = keyFrom('SUPABASE_SECRET_KEY', /^(sb_secret_|eyJ)/);
   const headers = { apikey: key, 'Content-Type': 'application/json', ...(opts.headers || {}) };
   if (key.startsWith('eyJ')) headers.Authorization = `Bearer ${key}`; // legacy service_role JWT
   return fetch(SUPABASE_URL + path, { ...opts, headers });
@@ -111,7 +113,7 @@ export function parseArticle(text) {
 }
 
 async function write(h, authorKey) {
-  const key = req('OPENROUTER_API_KEY');
+  const key = keyFrom('OPENROUTER_API_KEY', /^sk-or-/);
   for (const model of await models()) {
     try {
       const r = await fetch(`${OPENROUTER}/chat/completions`, {
