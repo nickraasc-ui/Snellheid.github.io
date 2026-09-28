@@ -99,8 +99,8 @@ Twist the headline into an absurd business lesson. Classic LinkedIn slop: humble
 Hard rules:
 - Never name, quote or impersonate real people. Refer to real companies only generically ("a big bank"), never claim they did anything.
 - Never mock victims, tragedies, illness, violence, religion, ethnicity or politics. If the headline cannot be used without that, write about something generic in business instead.
-- 150-250 words per language.
-- Dutch version: natural Dutch office speak, with the English buzzwords Dutch offices actually use. Not a literal translation.
+- English post: 150-250 words. Put your effort here.
+- Dutch post: a short, quick-and-dirty Dutch version of the same post, 60-120 words. Sloppy Dutch full of English buzzwords is fine.
 
 Reply with ONLY this JSON, no code fences:
 {"title_en": "...", "body_en": "...", "title_nl": "...", "body_nl": "..."}`;
