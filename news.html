@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title data-en="Newsroom — Snellheid Industries™" data-nl="Nieuwsredactie — Snellheid Industries™">Newsroom — Snellheid Industries™</title>
+  <meta name="description" content="Real headlines, turned into terrible LinkedIn thought leadership by the Snellheid executives. Satire, AI-generated every 4 hours.">
+  <meta property="og:title" content="Newsroom — Snellheid Industries™">
+  <meta property="og:description" content="Real headlines, turned into terrible LinkedIn thought leadership by the Snellheid executives. Satire, AI-generated every 4 hours.">
+  <meta property="og:image" content="https://www.snellheid.com/assets/img/og.png">
+  <meta name="theme-color" content="#0c3534">
+  <link rel="icon" href="assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/img/favicon-192.png">
+  <link rel="preload" href="assets/fonts/squadaone.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/snellheid.css">
+  <script>(function(){var l;try{l=JSON.parse(localStorage.getItem('snel-lang'))}catch(e){}l=l||((navigator.language||'').toLowerCase().indexOf('nl')===0?'nl':'en');document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l})()</script>
+  <script src="assets/js/core.js" defer></script>
+  <script src="assets/js/avatars.js" defer></script>
+  <script src="assets/js/news.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+<section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow"><span data-l="en">Newsroom</span><span data-l="nl">Nieuwsredactie</span></span>
+      <h1><span data-l="en">Thought leadership,<br>fresh every 4 hours.</span><span data-l="nl">Thought leadership,<br>elke 4 uur vers.</span></h1>
+      <p class="lead"><span data-l="en">Real headlines, turned into lessons nobody asked for by our executives. Written by an AI that was told to be terrible. It listened.</span><span data-l="nl">Echte nieuwskoppen, door onze directie omgetoverd tot lessen waar niemand om vroeg. Geschreven door een AI die de opdracht kreeg slecht te zijn. Dat lukte.</span></p>
+      <p class="fine"><span data-l="en">Satire. Generated automatically, not reviewed by a human, not real news. The linked headline is the only real thing on this page.</span><span data-l="nl">Satire. Automatisch gegenereerd, niet door een mens gecontroleerd, geen echt nieuws. De gelinkte kop is het enige echte op deze pagina.</span></p>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="feed" id="feed" aria-live="polite"></div>
+      <p class="center" id="feed-status" style="margin-top:16px"></p>
+      <p class="center"><button class="btn" id="feed-more" hidden><span data-l="en">Load more thought leadership</span><span data-l="nl">Meer thought leadership laden</span></button></p>
+    </div>
+  </section>
+</main>
+<div id="site-footer"></div>
+</body>
+</html>

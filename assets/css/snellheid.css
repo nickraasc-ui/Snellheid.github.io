@@ -233,7 +233,7 @@ label { font-weight: 700; display: block; margin-bottom: 6px; }
 .site-nav { margin-left: auto; display: flex; gap: 4px; align-items: center; }
 .site-nav a {
   color: var(--ink); text-decoration: none; font-weight: 700; font-size: .92rem;
-  padding: 8px 12px; border-radius: 8px;
+  padding: 8px 12px; border-radius: 8px; white-space: nowrap;
 }
 .site-nav a:hover { background: var(--bg-2); color: var(--peach); }
 .site-nav a[aria-current="page"] { background: var(--peach); color: var(--black); }
@@ -247,7 +247,7 @@ label { font-weight: 700; display: block; margin-bottom: 6px; }
 html[data-lang="en"] .lang-toggle .en, html[data-lang="nl"] .lang-toggle .nl { background: var(--peach); color: var(--black); }
 .nav-toggle { display: none; background: none; border: 2px solid var(--peach); color: var(--peach); border-radius: 8px; font-size: 1.3rem; padding: 4px 10px; cursor: pointer; }
 
-@media (max-width: 960px) {
+@media (max-width: 1120px) {
   .nav-toggle { display: block; margin-left: auto; }
   .site-nav {
     position: absolute; top: 100%; left: 0; right: 0;
@@ -511,3 +511,23 @@ html.synergy main > * { animation: merge 1.4s ease-in-out; }
 .leaderboard b { font-family: var(--display); font-size: 1.4rem; color: var(--peach); font-weight: 400; }
 #lb-form { margin-top: 16px; max-width: 480px; margin-inline: auto; }
 #lb-form input { flex: 1 1 180px; }
+
+/* ---- Newsroom ----------------------------------------------------------- */
+.feed { display: grid; gap: 24px; max-width: 680px; margin: 0 auto; }
+.post { background: #fff6ef; color: var(--black); border-color: var(--black); }
+.post:hover { transform: none; }
+.post .fine { opacity: .7; }
+.post-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; line-height: 1.3; }
+.post-avatar svg { width: 56px; height: 56px; display: block; border-radius: 50%; border: 2px solid var(--black); }
+.post-flag { margin-left: auto; flex: none; }
+.post h3 { color: var(--black); text-shadow: none; margin-bottom: .4em; }
+.post-body { white-space: pre-line; }
+.post-body.clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.post .more { background: none; border: 0; padding: 4px 0; color: var(--bg-3); font-weight: 700; cursor: pointer; }
+.post-stats { border-bottom: 1px solid rgba(10, 26, 26, .15); padding: 10px 0; margin-top: 8px; }
+.post-actions { display: flex; gap: 4px; flex-wrap: wrap; padding: 6px 0; }
+.post-actions button { flex: 1; background: none; border: 0; border-radius: 8px; padding: 8px; font: 700 .9rem var(--body); color: var(--black); cursor: pointer; }
+.post-actions button:hover { background: rgba(61, 176, 173, .15); }
+.post-actions button.on { color: var(--hot); }
+.post-source { margin: 8px 0 0; }
+.post-source a { color: var(--bg-3); }

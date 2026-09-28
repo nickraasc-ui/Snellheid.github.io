@@ -31,6 +31,7 @@
     ['products.html', 'Divisions', 'Divisies'],
     ['leadership.html', 'Leadership', 'Leiderschap'],
     ['investors.html', 'Investors', 'Investeerders'],
+    ['news.html', 'Newsroom', 'Nieuws'],
     ['careers.html', 'Careers', 'Vacatures'],
     ['breakroom.html', 'Break Room', 'Kantine']
   ];
