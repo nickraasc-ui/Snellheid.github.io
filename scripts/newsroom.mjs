@@ -77,12 +77,16 @@ async function usedUrls() {
 }
 
 // Prefer an explicit model; otherwise discover OpenRouter's current free models.
+// Free models come and go and are often rate-limited, so rank them and try several.
+const FAMILIES = [/deepseek/, /qwen/, /gemini|gemma/, /llama/, /mistral|mixtral/, /gpt-oss/, /glm/, /kimi/, /nemotron/];
 async function models() {
-  if (process.env.OPENROUTER_MODEL) return process.env.OPENROUTER_MODEL.split(',');
+  if (process.env.OPENROUTER_MODEL) return process.env.OPENROUTER_MODEL.split(',').map((id) => ({ id: id.trim(), json: false }));
   const r = await fetch(`${OPENROUTER}/models`);
-  const ids = (await r.json()).data.map((m) => m.id).filter((id) => id.endsWith(':free'));
-  const rank = (id) => { const i = [/deepseek/, /qwen/, /gemini/, /llama/, /mistral/].findIndex((p) => p.test(id)); return i < 0 ? 99 : i; };
-  return ids.sort((a, b) => rank(a) - rank(b)).slice(0, 5);
+  const list = (await r.json()).data.filter((m) => m.id.endsWith(':free') && (m.context_length || 0) >= 16000);
+  const fam = (id) => { const i = FAMILIES.findIndex((p) => p.test(id)); return i < 0 ? 99 : i; };
+  const small = (id) => /\b(\d(\.\d)?b|1\.\db|mini|nano|tiny|lightning|flash-lite)\b/i.test(id) ? 1 : 0; // likely too weak for bilingual satire
+  list.sort((a, b) => small(a.id) - small(b.id) || fam(a.id) - fam(b.id) || (b.context_length || 0) - (a.context_length || 0));
+  return list.slice(0, 8).map((m) => ({ id: m.id, json: (m.supported_parameters || []).includes('response_format') }));
 }
 
 function prompt(h, authorKey) {
@@ -114,19 +118,32 @@ export function parseArticle(text) {
 
 async function write(h, authorKey) {
   const key = keyFrom('OPENROUTER_API_KEY', /^sk-or-/);
-  for (const model of await models()) {
-    try {
-      const r = await fetch(`${OPENROUTER}/chat/completions`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://www.snellheid.com', 'X-Title': 'Snellheid Newsroom' },
-        body: JSON.stringify({ model, temperature: 1, max_tokens: 2500, messages: [{ role: 'user', content: prompt(h, authorKey) }] }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(`${r.status} ${JSON.stringify(data).slice(0, 200)}`);
-      const a = parseArticle(data.choices[0].message.content);
-      log('written by', model);
-      return { ...a, model };
-    } catch (e) { log('model failed', model, e.message); }
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (const m of await models()) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const body = {
+          model: m.id, temperature: 1, max_tokens: 8000,
+          reasoning: { effort: 'low', exclude: true }, // thinking models: think briefly, return only the answer
+          messages: [{ role: 'user', content: prompt(h, authorKey) }],
+        };
+        if (m.json) body.response_format = { type: 'json_object' };
+        const r = await fetch(`${OPENROUTER}/chat/completions`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://www.snellheid.com', 'X-Title': 'Snellheid Newsroom' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(90000),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.status === 429 && attempt === 1) { log('rate-limited, retrying once:', m.id); await sleep(8000); continue; }
+        if (!r.ok || data.error) throw new Error(`${r.status} ${JSON.stringify(data.error || data).slice(0, 160)}`);
+        const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (!content) throw new Error(`empty answer (finish_reason: ${data.choices && data.choices[0] && data.choices[0].finish_reason})`);
+        const a = parseArticle(content);
+        log('written by', m.id);
+        return { ...a, model: m.id };
+      } catch (e) { log('model failed', m.id, e.message); break; }
+    }
   }
   throw new Error('All models failed');
 }
