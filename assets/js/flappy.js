@@ -30,7 +30,7 @@
     }
     function flap() {
       if (s.mode === 'ready') { s.mode = 'play'; }
-      if (s.mode === 'over') { if (performance.now() - s.overAt > 500) { reset(); } return; }
+      if (s.mode === 'over') { if (performance.now() - s.overAt > 500) { reset(); document.dispatchEvent(new CustomEvent('snel:flappy-start')); } return; }
       s.vy = -7.6;
     }
     function spawn() {
@@ -67,6 +67,7 @@
       overMsg = OVER[Math.floor(Math.random() * OVER.length)];
       if (s.score > best) { best = s.score; Snel.store.set('snel-flappy-best', best); }
       document.getElementById('flappy-best').textContent = best;
+      document.dispatchEvent(new CustomEvent('snel:flappy-over', { detail: s.score }));
       if (s.score >= 10) Snel.bump(s.score / 5, { en: 'Flappy Snail shipped ' + s.score + ' deliverables', nl: 'Flappy Snail leverde ' + s.score + ' deliverables op' });
     }
 

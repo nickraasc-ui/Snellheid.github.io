@@ -18,6 +18,7 @@
   <script src="assets/js/dirk.js" defer></script>
   <script src="assets/js/meeting.js" defer></script>
   <script src="assets/js/flappy.js" defer></script>
+  <script src="assets/js/leaderboard.js" defer></script>
 </head>
 <body>
 <div id="site-header"></div>
@@ -68,10 +69,29 @@
           <h2>Flappy Snail</h2>
           <p class="lead"><span data-l="en">You are a snail with a rocket. Your calendar is a wall of meetings. Fly through the gaps. Every five deliverables, the quarter gets faster.</span><span data-l="nl">Je bent een slak met een raket. Je agenda is een muur van vergaderingen. Vlieg door de gaten. Elke vijf deliverables gaat het kwartaal sneller.</span></p>
           <p><span data-l="en">Your best:</span><span data-l="nl">Jouw record:</span> <b class="display" id="flappy-best" style="font-size:2rem">0</b></p>
-          <p class="fine"><span data-l="en">Tap, click or press Space. Scores of 10+ lift $SNEL. Top performers are rumoured to be recognised in the Employee Portal.</span><span data-l="nl">Tik, klik of druk op spatie. Scores van 10+ tillen $SNEL omhoog. Topprestaties worden naar verluidt erkend in het Medewerkersportaal.</span></p>
+          <p class="fine"><span data-l="en">Tap, click or press Space. Scores of 10+ lift $SNEL for everyone. The top performer becomes Employee of the Month.</span><span data-l="nl">Tik, klik of druk op spatie. Scores van 10+ tillen $SNEL voor iedereen omhoog. De beste wordt Medewerker van de Maand.</span></p>
+          <div class="card leaderboard mt-2">
+            <div class="row">
+              <h3 class="mb-0"><span data-l="en">Employee of the Month</span><span data-l="nl">Medewerker van de Maand</span></h3>
+              <span class="spacer"></span>
+              <div class="seg" role="group" aria-label="Leaderboard range">
+                <button data-lb="all" aria-pressed="true"><span data-l="en">All-time</span><span data-l="nl">Altijd</span></button><button data-lb="week" aria-pressed="false"><span data-l="en">This week</span><span data-l="nl">Deze week</span></button>
+              </div>
+            </div>
+            <ol id="lb-list"></ol>
+            <p class="fine mb-0" id="lb-status" aria-live="polite"></p>
+          </div>
         </div>
-        <div class="game-frame">
-          <canvas id="flappy" width="480" height="640" tabindex="0" aria-label="Flappy Snail game. Press Space or tap to flap."></canvas>
+        <div>
+          <div class="game-frame">
+            <canvas id="flappy" width="480" height="640" tabindex="0" aria-label="Flappy Snail game. Press Space or tap to flap."></canvas>
+          </div>
+          <form id="lb-form" class="row" hidden>
+            <label for="lb-name" class="sr-only">Name</label>
+            <input id="lb-name" maxlength="20" autocomplete="nickname" required data-en-placeholder="Your name for the leaderboard" data-nl-placeholder="Je naam voor het klassement" placeholder="Your name for the leaderboard">
+            <button class="btn hot small" type="submit"><span data-l="en">Submit</span><span data-l="nl">Indienen</span> <span id="lb-score">0</span> 🏆</button>
+          </form>
+          <p id="lb-msg" class="center" aria-live="polite" style="font-weight:700;margin-top:10px"></p>
         </div>
       </div>
     </div>

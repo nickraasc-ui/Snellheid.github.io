@@ -158,6 +158,22 @@
     setTimeout(function () { s.remove(); }, 1900);
   }
 
+  /* ---------- the cloud (Supabase) ----------
+     Publishable key: safe to be public, row-level security decides what it may do.
+     If Supabase is unreachable everything silently falls back to per-visitor state. */
+  var CLOUD = { url: 'https://simdsmzaogctcfjokhuk.supabase.co', key: 'sb_publishable_lzWfvrTU65TDM4S78EvrnQ_WMcLXcUz' };
+  function cloud(path, opts) {
+    opts = opts || {};
+    var headers = { apikey: CLOUD.key, 'Content-Type': 'application/json' };
+    if (opts.prefer) headers.Prefer = opts.prefer;
+    return fetch(CLOUD.url + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) {
+        if (!r.ok) throw new Error('cloud ' + r.status);
+        return r.text(); // inserts answer 201 with an empty body
+      })
+      .then(function (txt) { return txt ? JSON.parse(txt) : null; });
+  }
+
   /* ---------- the market ---------- */
   var price = store.sget('snel-price', 420.69);
   var TICKS = [
@@ -193,16 +209,30 @@
     });
     renderTicker();
   }
-  function bump(pct, reason) {
+  function setPrice(p, ch) {
+    if (!isFinite(p) || p <= 0) return;
     var k = TICKS[0];
-    k.p = Math.max(.01, k.p * (1 + pct / 100));
-    k.ch = pct;
-    price = k.p;
+    if (ch == null) ch = (p - k.p) / k.p * 100;
+    k.p = p; k.ch = ch; price = p;
     store.sset('snel-price', price);
     renderTicker();
+    document.dispatchEvent(new CustomEvent('snel:price', { detail: price }));
+  }
+  // one global $SNEL for every visitor: read on load, re-sync every 20s while the tab is visible
+  function syncPrice() {
+    if (document.hidden) return;
+    cloud('/rest/v1/snel_stock?select=price&id=eq.1').then(function (rows) {
+      if (rows && rows[0]) setPrice(+rows[0].price);
+    }, function () {});
+  }
+  function bump(pct, reason) {
+    pct = Math.max(-5, Math.min(20, pct)); // same caps as the database
+    setPrice(Math.max(.01, TICKS[0].p * (1 + pct / 100)), pct); // optimistic
+    cloud('/rest/v1/rpc/bump_snel', { method: 'POST', body: { pct: +pct.toFixed(2) } }).then(function (p) {
+      if (p != null) setPrice(+p, pct); // the server's price wins
+    }, function () {});
     var up = pct >= 0;
     toast('<b>$SNEL</b> <span class="' + (up ? 'up' : 'down') + '">' + (up ? '▲ +' : '▼ ') + pct.toFixed(1) + '%</span> · ' + t(reason));
-    document.dispatchEvent(new CustomEvent('snel:price', { detail: price }));
   }
 
   /* ---------- easter eggs ---------- */
@@ -312,6 +342,8 @@
     setLang(lang());
     drift();
     setInterval(drift, 2500);
+    syncPrice();
+    setInterval(syncPrice, 20000);
     document.addEventListener('keydown', onKey);
     ['mousemove', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { document.addEventListener(ev, resetIdle, { passive: true }); });
     resetIdle();
@@ -326,6 +358,6 @@
     console_();
   }
 
-  window.Snel = { turbo: turbo, t: t, lang: lang, setLang: setLang, toast: toast, confetti: confetti, bump: bump, shout: shout, launchSnail: launchSnail, store: store, pick: pick, price: function () { return price; } };
+  window.Snel = { turbo: turbo, t: t, lang: lang, setLang: setLang, toast: toast, confetti: confetti, bump: bump, shout: shout, launchSnail: launchSnail, store: store, pick: pick, cloud: cloud, price: function () { return price; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

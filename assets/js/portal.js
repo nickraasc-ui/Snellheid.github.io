@@ -15,6 +15,10 @@
   function fill() {
     document.getElementById('lb-flappy').textContent = Snel.store.get('snel-flappy-best', 0);
     document.getElementById('lb-meeting').textContent = Snel.store.get('snel-meeting-best', 0);
+    var eotm = document.getElementById('eotm');
+    if (window.SnelLeaderboard) SnelLeaderboard.top('all').then(function (rows) {
+      eotm.textContent = rows.length ? rows[0].name + ' · ' + rows[0].score : Snel.t({ en: 'Position vacant', nl: 'Vacature' });
+    }, function () { eotm.textContent = Snel.t({ en: 'Brian (by default)', nl: 'Brian (standaard)' }); });
     var board = document.getElementById('soundboard');
     if (board.children.length) return;
     (window.DIRK || []).forEach(function (q) {

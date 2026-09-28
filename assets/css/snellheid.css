@@ -500,3 +500,14 @@ html.synergy main > * { animation: merge 1.4s ease-in-out; }
 .compare td:nth-child(2) { background: rgba(255, 61, 127, .12); font-weight: 800; }
 #soundboard { display: flex; flex-wrap: wrap; gap: 4px; }
 #soundboard .btn { font-size: .85rem; }
+
+/* ---- Leaderboard -------------------------------------------------------- */
+.leaderboard ol { list-style: none; padding: 0; margin: 12px 0 0; counter-reset: none; }
+.leaderboard li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-bottom: 1px dashed var(--bg-3); }
+.leaderboard li:nth-child(-n+3) { font-weight: 800; }
+.leaderboard li.me { background: rgba(255, 61, 127, .18); border-radius: 8px; }
+.leaderboard .pos { width: 2em; text-align: center; }
+.leaderboard .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard b { font-family: var(--display); font-size: 1.4rem; color: var(--peach); font-weight: 400; }
+#lb-form { margin-top: 16px; max-width: 480px; margin-inline: auto; }
+#lb-form input { flex: 1 1 180px; }

@@ -17,6 +17,7 @@
   <script>(function(){var l;try{l=JSON.parse(localStorage.getItem('snel-lang'))}catch(e){}l=l||((navigator.language||'').toLowerCase().indexOf('nl')===0?'nl':'en');document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l})()</script>
   <script src="assets/js/core.js" defer></script>
   <script src="assets/js/dirk.js" defer></script>
+  <script src="assets/js/leaderboard.js" defer></script>
   <script src="assets/js/portal.js" defer></script>
 </head>
 <body>
@@ -60,6 +61,12 @@
           <h3><span data-l="en">Dirk Soundboard™</span><span data-l="nl">Dirk-soundboard™</span></h3>
           <p class="fine"><span data-l="en">Click to hear Dirk. Uses your browser’s voice, which is less Austrian than we’d like.</span><span data-l="nl">Klik om Dirk te horen. Gebruikt de stem van je browser, die minder Oostenrijks is dan we zouden willen.</span></p>
           <div id="soundboard"></div>
+        </div>
+
+        <div class="card mt-2 center" style="background:var(--peach);color:var(--black);border-color:var(--black)">
+          <span class="badge hot">🏆 <span data-l="en">Employee of the Month</span><span data-l="nl">Medewerker van de Maand</span></span>
+          <h2 id="eotm" style="margin:12px 0 4px;color:var(--black);text-shadow:3px 3px 0 var(--hot)">…</h2>
+          <p class="mb-0" id="eotm-sub"><span data-l="en">Best Flappy Snail score on record. Dirk is watching.</span><span data-l="nl">Beste Flappy Snail-score ooit. Dirk kijkt mee.</span></p>
         </div>
 
         <div class="grid grid-3 mt-2">
