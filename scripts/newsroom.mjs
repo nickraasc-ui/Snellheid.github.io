@@ -136,6 +136,12 @@ async function main() {
     log('not configured yet: add the OPENROUTER_API_KEY and SUPABASE_SECRET_KEY repository secrets. Skipping.');
     return;
   }
+  if (!process.env.DRY_RUN) {
+    // Diagnostics without leaking: key type and length only.
+    const k = keyFrom('SUPABASE_SECRET_KEY', /^(sb_secret_|eyJ)/);
+    const type = k.startsWith('sb_secret_') ? 'sb_secret_' : k.startsWith('eyJ') ? 'legacy JWT' : k.startsWith('sb_publishable_') ? 'PUBLISHABLE (wrong key!)' : 'unknown format';
+    log(`Supabase key: ${type}, ${k.length} chars${/[•*]/.test(k) ? ', contains masking dots (copied before Reveal?)' : ''}`);
+  }
   const used = process.env.DRY_RUN ? new Set() : await usedUrls();
   const pool = (await headlines()).filter(allowed).filter((h) => !used.has(h.url));
   if (!pool.length) { log('no usable headlines, skipping this run'); return; }
