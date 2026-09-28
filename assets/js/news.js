@@ -18,14 +18,30 @@
     var h = Math.round(m / 60); if (h < 24) return h + (nl ? ' u' : 'h');
     var d = Math.round(h / 24); return d + (nl ? ' d' : 'd');
   }
-  // fake but stable engagement numbers per article
-  function stat(id, n) { var x = Math.sin(id * 9301 + n * 49297) * 233280; return Math.floor((x - Math.floor(x)) * 1000); }
+  // Reactions are shared counters in Supabase; this browser remembers which ones it gave (so it can undo them).
+  var REACTS = [
+    ['like', 'likes', '👍', { en: 'Like', nl: 'Vind ik leuk' }],
+    ['insightful', 'insightful', '💡', { en: 'Insightful', nl: 'Inzichtelijk' }],
+    ['agree', 'agree', '🤝', { en: 'Agree?', nl: 'Eens?' }]
+  ];
+  var mine = Snel.store.get('snel-reacts', {});
+  function given(id, kind) { return !!(mine[id] && mine[id][kind]); }
+  function reactHtml(a) {
+    var L = Snel.lang(), n = function (x) { return (+x || 0).toLocaleString(L === 'nl' ? 'nl-NL' : 'en-US'); };
+    var total = REACTS.reduce(function (t, r) { return t + (+a[r[1]] || 0); }, 0);
+    var stats = total
+      ? REACTS.filter(function (r) { return +a[r[1]]; }).map(function (r) { return r[2] + ' ' + n(a[r[1]]); }).join(' · ')
+      : Snel.t({ en: 'No reactions yet. Be the first thought leader.', nl: 'Nog geen reacties. Wees de eerste thought leader.' });
+    return '<div class="post-stats fine">' + stats + '</div>' +
+      '<div class="post-actions">' + REACTS.map(function (r) {
+        return '<button type="button" data-react="' + r[0] + '" aria-pressed="' + given(a.id, r[0]) + '"' + (given(a.id, r[0]) ? ' class="on"' : '') + '>' + r[2] + ' ' + Snel.t(r[3]) + '</button>';
+      }).join('') + '</div>';
+  }
 
   function card(a) {
     var L = Snel.lang(), p = (window.SNEL_PEOPLE || {})[a.author] || { name: a.author };
     var title = L === 'nl' ? a.title_nl : a.title_en, body = L === 'nl' ? a.body_nl : a.body_en;
-    var likes = 1000 + stat(a.id, 1) * 12, comments = stat(a.id, 2), reposts = stat(a.id, 3) % 200;
-    return '<article class="card post">' +
+    return '<article class="card post" data-id="' + (+a.id) + '">' +
       '<header class="post-head"><span class="post-avatar">' + (window.SnelAvatar ? SnelAvatar(Object.assign({ label: p.name }, p)) : '') + '</span>' +
       '<div><b>' + esc(p.name) + '</b> <span class="fine">· ' + Snel.t({ en: '1st', nl: '1e' }) + '</span><br>' +
       '<span class="fine">' + esc(Snel.t(TITLES[a.author] || { en: '', nl: '' })) + '</span><br>' +
@@ -34,8 +50,7 @@
       '<h3>' + esc(title) + '</h3>' +
       '<div class="post-body clamp">' + esc(body) + '</div>' +
       '<button class="more" type="button">' + Snel.t({ en: '…see more', nl: '…meer weergeven' }) + '</button>' +
-      '<div class="post-stats fine">👍❤️💡 ' + likes.toLocaleString(L === 'nl' ? 'nl-NL' : 'en-US') + ' · ' + comments + Snel.t({ en: ' comments · ', nl: ' reacties · ' }) + reposts + Snel.t({ en: ' reposts', nl: ' reposts' }) + '</div>' +
-      '<div class="post-actions"><button type="button" data-react="like">👍 ' + Snel.t({ en: 'Like', nl: 'Vind ik leuk' }) + '</button><button type="button" data-react="insightful">💡 ' + Snel.t({ en: 'Insightful', nl: 'Inzichtelijk' }) + '</button><button type="button" data-react="agree">🤝 ' + Snel.t({ en: 'Agree?', nl: 'Eens?' }) + '</button></div>' +
+      '<div class="post-react">' + reactHtml(a) + '</div>' +
       '<p class="post-source fine">' + Snel.t({ en: 'Loosely inspired by a real headline', nl: 'Losjes geïnspireerd op een echte kop' }) + ' (' + esc(a.source_name || '') + '): <a href="' + esc(safeUrl(a.source_url)) + '" target="_blank" rel="noopener nofollow">' + esc(a.source_title) + '</a></p>' +
       '</article>';
   }
@@ -56,7 +71,7 @@
     function load() {
       moreBtn.disabled = true;
       status.textContent = Snel.t({ en: 'Refreshing the thought leadership…', nl: 'Thought leadership wordt ververst…' });
-      Snel.cloud('/rest/v1/news_articles?select=id,created_at,author,source_title,source_url,source_name,title_en,body_en,title_nl,body_nl&order=created_at.desc&limit=' + PAGE + '&offset=' + rows.length).then(function (r) {
+      Snel.cloud('/rest/v1/news_articles?select=*&order=created_at.desc&limit=' + PAGE + '&offset=' + rows.length).then(function (r) {
         r = r || [];
         rows = rows.concat(r); done = r.length < PAGE;
         status.textContent = rows.length ? '' : Snel.t({ en: 'The newsroom is in a meeting. The first article drops within 4 hours.', nl: 'De redactie zit in een vergadering. Het eerste artikel verschijnt binnen 4 uur.' });
@@ -70,10 +85,23 @@
       var m = e.target.closest('.more');
       if (m) { m.previousElementSibling.classList.remove('clamp'); m.hidden = true; return; }
       var r = e.target.closest('[data-react]');
-      if (r && !r.classList.contains('on')) {
-        r.classList.add('on');
-        Snel.bump(.5, { en: 'Engagement is through the roof', nl: 'Engagement gaat door het dak' });
-      }
+      if (!r || r.disabled) return;
+      var el = r.closest('.post'), id = +el.getAttribute('data-id'), kind = r.getAttribute('data-react');
+      var row = rows.filter(function (x) { return x.id === id; })[0], col = REACTS.filter(function (x) { return x[0] === kind; })[0][1];
+      var delta = given(id, kind) ? -1 : 1;
+      function paint() { el.querySelector('.post-react').innerHTML = reactHtml(row); }
+      // optimistic update, then take the database's numbers
+      mine[id] = mine[id] || {}; mine[id][kind] = delta > 0; Snel.store.set('snel-reacts', mine);
+      row[col] = Math.max(0, (+row[col] || 0) + delta); paint();
+      if (delta > 0) Snel.bump(.5, { en: 'Engagement is through the roof', nl: 'Engagement gaat door het dak' });
+      Snel.cloud('/rest/v1/rpc/react_article', { method: 'POST', body: { article_id: id, kind: kind, delta: delta } }).then(function (res) {
+        var c = res && res[0];
+        if (c) { row.likes = c.r_likes; row.insightful = c.r_insightful; row.agree = c.r_agree; paint(); }
+      }, function () {
+        mine[id][kind] = delta < 0; Snel.store.set('snel-reacts', mine);
+        row[col] = Math.max(0, (+row[col] || 0) - delta); paint();
+        Snel.toast(Snel.t({ en: '❌ Your reaction was circled back. Try again later.', nl: '❌ Er wordt op je reactie teruggekomen. Probeer het later opnieuw.' }));
+      });
     });
     moreBtn.addEventListener('click', load);
     document.addEventListener('snel:lang', render);
