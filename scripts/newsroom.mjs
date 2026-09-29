@@ -88,7 +88,9 @@ const FAMILIES = [/deepseek/, /qwen/, /gemini|gemma/, /llama/, /mistral|mixtral/
 async function models(lastModel) {
   if (process.env.OPENROUTER_MODEL) return process.env.OPENROUTER_MODEL.split(',').map((id) => ({ id: id.trim(), json: false }));
   const r = await fetch(`${OPENROUTER}/models`);
-  const list = (await r.json()).data.filter((m) => m.id.endsWith(':free') && (m.context_length || 0) >= 16000);
+  // Not writers: safety classifiers, guards, embedding/reward models; agent-only models answer 403.
+  const notWriter = /safety|guard|moderat|embed|rerank|reward|classif|inkling/i;
+  const list = (await r.json()).data.filter((m) => m.id.endsWith(':free') && !notWriter.test(m.id) && (m.context_length || 0) >= 16000);
   const fam = (id) => { const i = FAMILIES.findIndex((p) => p.test(id)); return i < 0 ? 99 : i; };
   const small = (id) => /\b(\d(\.\d)?b|1\.\db|mini|nano|tiny|lightning|flash-lite)\b/i.test(id) ? 1 : 0; // likely too weak for bilingual satire
   const proven = (id) => (id === lastModel ? 0 : 1); // the model that wrote the last article goes first
@@ -151,7 +153,7 @@ async function write(h, authorKey, lastModel) {
       return { ...a, model: m.id };
     } catch (e) { log('model failed', m.id, e.message); }
   }
-  throw new Error('All models failed');
+  const e = new Error('No free model available right now'); e.soft = true; throw e;
 }
 
 async function main() {
@@ -188,4 +190,8 @@ async function main() {
   log('published:', a.title_en);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => { console.error(e); process.exit(1); });
+if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => {
+  // Free models are often all busy; the next hourly kick simply tries again, so don't fail the run (no email spam).
+  if (e.soft) { console.log(`::warning::${e.message}. The next hourly run will try again.`); return; }
+  console.error(e); process.exit(1);
+});
