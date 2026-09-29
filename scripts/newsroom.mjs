@@ -167,7 +167,8 @@ async function main() {
   }
   const hist = process.env.DRY_RUN ? { used: new Set(), ageMin: Infinity } : await history();
   const gap = +(process.env.NEWS_MIN_GAP_MIN || 210);
-  const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
+  // Manual button presses force an article; the Supabase cron kick passes force=false and waits its turn.
+  const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch' && process.env.FORCE !== 'false';
   if (!manual && hist.ageMin < gap) {
     log(`latest article is ${Math.round(hist.ageMin)} min old (< ${gap}); nothing due, no tokens spent.`);
     return;

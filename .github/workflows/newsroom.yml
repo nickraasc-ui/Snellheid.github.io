@@ -5,7 +5,14 @@ on:
     # Wakes hourly but only writes when the newest article is 3.5h+ old (see NEWS_MIN_GAP_MIN in the script),
     # so a run GitHub skips is caught up an hour later. Skipped checks spend no AI tokens.
     - cron: '17 * * * *'
-  workflow_dispatch:          # "Run workflow" button for manual runs
+  # "Run workflow" button (always writes an article), and the hourly kick from Supabase pg_cron,
+  # which sends force=false so it only writes when one is due. GitHub's own schedule is unreliable.
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Write an article even if the last one is recent'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -28,3 +35,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          FORCE: ${{ inputs.force }}
