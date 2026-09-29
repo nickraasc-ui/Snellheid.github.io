@@ -70,22 +70,29 @@ function sb(path, opts = {}) {
   return fetch(SUPABASE_URL + path, { ...opts, headers });
 }
 
-async function usedUrls() {
-  const r = await sb('/rest/v1/news_articles?select=source_url&order=created_at.desc&limit=100');
+// One read gives everything: headlines already used, age of the newest article, and the last model that worked.
+async function history() {
+  const r = await sb('/rest/v1/news_articles?select=source_url,created_at,model&order=created_at.desc&limit=100');
   if (!r.ok) throw new Error(`Supabase read failed: ${r.status} ${await r.text()}`);
-  return new Set((await r.json()).map((x) => x.source_url));
+  const rows = await r.json();
+  return {
+    used: new Set(rows.map((x) => x.source_url)),
+    ageMin: rows.length ? (Date.now() - new Date(rows[0].created_at)) / 60000 : Infinity,
+    lastModel: (rows.find((x) => x.model) || {}).model,
+  };
 }
 
 // Prefer an explicit model; otherwise discover OpenRouter's current free models.
 // Free models come and go and are often rate-limited, so rank them and try several.
 const FAMILIES = [/deepseek/, /qwen/, /gemini|gemma/, /llama/, /mistral|mixtral/, /gpt-oss/, /glm/, /kimi/, /nemotron/];
-async function models() {
+async function models(lastModel) {
   if (process.env.OPENROUTER_MODEL) return process.env.OPENROUTER_MODEL.split(',').map((id) => ({ id: id.trim(), json: false }));
   const r = await fetch(`${OPENROUTER}/models`);
   const list = (await r.json()).data.filter((m) => m.id.endsWith(':free') && (m.context_length || 0) >= 16000);
   const fam = (id) => { const i = FAMILIES.findIndex((p) => p.test(id)); return i < 0 ? 99 : i; };
   const small = (id) => /\b(\d(\.\d)?b|1\.\db|mini|nano|tiny|lightning|flash-lite)\b/i.test(id) ? 1 : 0; // likely too weak for bilingual satire
-  list.sort((a, b) => small(a.id) - small(b.id) || fam(a.id) - fam(b.id) || (b.context_length || 0) - (a.context_length || 0));
+  const proven = (id) => (id === lastModel ? 0 : 1); // the model that wrote the last article goes first
+  list.sort((a, b) => proven(a.id) - proven(b.id) || small(a.id) - small(b.id) || fam(a.id) - fam(b.id) || (b.context_length || 0) - (a.context_length || 0));
   return list.slice(0, 8).map((m) => ({ id: m.id, json: (m.supported_parameters || []).includes('response_format') }));
 }
 
@@ -99,8 +106,8 @@ Twist the headline into an absurd business lesson. Classic LinkedIn slop: humble
 Hard rules:
 - Never name, quote or impersonate real people. Refer to real companies only generically ("a big bank"), never claim they did anything.
 - Never mock victims, tragedies, illness, violence, religion, ethnicity or politics. If the headline cannot be used without that, write about something generic in business instead.
-- English post: 150-250 words. Put your effort here.
-- Dutch post: a short, quick-and-dirty Dutch version of the same post, 60-120 words. Sloppy Dutch full of English buzzwords is fine.
+- English post: 120-180 words. Put your effort here.
+- Dutch post: a short, quick-and-dirty Dutch version of the same post, 50-90 words. Sloppy Dutch full of English buzzwords is fine.
 
 Reply with ONLY this JSON, no code fences:
 {"title_en": "...", "body_en": "...", "title_nl": "...", "body_nl": "..."}`;
@@ -116,34 +123,33 @@ export function parseArticle(text) {
   return j;
 }
 
-async function write(h, authorKey) {
+async function write(h, authorKey, lastModel) {
   const key = keyFrom('OPENROUTER_API_KEY', /^sk-or-/);
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  for (const m of await models()) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const body = {
-          model: m.id, temperature: 1, max_tokens: 8000,
-          reasoning: { effort: 'low', exclude: true }, // thinking models: think briefly, return only the answer
-          messages: [{ role: 'user', content: prompt(h, authorKey) }],
-        };
-        if (m.json) body.response_format = { type: 'json_object' };
-        const r = await fetch(`${OPENROUTER}/chat/completions`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://www.snellheid.com', 'X-Title': 'Snellheid Newsroom' },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(90000),
-        });
-        const data = await r.json().catch(() => ({}));
-        if (r.status === 429 && attempt === 1) { log('rate-limited, retrying once:', m.id); await sleep(8000); continue; }
-        if (!r.ok || data.error) throw new Error(`${r.status} ${JSON.stringify(data.error || data).slice(0, 160)}`);
-        const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-        if (!content) throw new Error(`empty answer (finish_reason: ${data.choices && data.choices[0] && data.choices[0].finish_reason})`);
-        const a = parseArticle(content);
-        log('written by', m.id);
-        return { ...a, model: m.id };
-      } catch (e) { log('model failed', m.id, e.message); break; }
-    }
+  for (const m of await models(lastModel)) {
+    try {
+      const body = {
+        model: m.id, temperature: 1,
+        max_tokens: 4000, // hard cap on paid-for output, incl. any hidden reasoning
+        reasoning: { effort: 'low', exclude: true },
+        messages: [{ role: 'user', content: prompt(h, authorKey) }],
+      };
+      if (m.json) body.response_format = { type: 'json_object' };
+      const r = await fetch(`${OPENROUTER}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://www.snellheid.com', 'X-Title': 'Snellheid Newsroom' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(90000),
+      });
+      const data = await r.json().catch(() => ({}));
+      // 429 = rejected before generating: costs no tokens, just move on.
+      if (!r.ok || data.error) throw new Error(`${r.status} ${JSON.stringify(data.error || data).slice(0, 120)}`);
+      const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (data.usage) log(`tokens ${m.id}: in ${data.usage.prompt_tokens}, out ${data.usage.completion_tokens}`);
+      if (!content) throw new Error(`empty answer (finish_reason: ${data.choices && data.choices[0] && data.choices[0].finish_reason})`);
+      const a = parseArticle(content);
+      log('written by', m.id);
+      return { ...a, model: m.id };
+    } catch (e) { log('model failed', m.id, e.message); }
   }
   throw new Error('All models failed');
 }
@@ -159,14 +165,21 @@ async function main() {
     const type = k.startsWith('sb_secret_') ? 'sb_secret_' : k.startsWith('eyJ') ? 'legacy JWT' : k.startsWith('sb_publishable_') ? 'PUBLISHABLE (wrong key!)' : 'unknown format';
     log(`Supabase key: ${type}, ${k.length} chars${/[•*]/.test(k) ? ', contains masking dots (copied before Reveal?)' : ''}`);
   }
-  const used = process.env.DRY_RUN ? new Set() : await usedUrls();
+  const hist = process.env.DRY_RUN ? { used: new Set(), ageMin: Infinity } : await history();
+  const gap = +(process.env.NEWS_MIN_GAP_MIN || 210);
+  const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
+  if (!manual && hist.ageMin < gap) {
+    log(`latest article is ${Math.round(hist.ageMin)} min old (< ${gap}); nothing due, no tokens spent.`);
+    return;
+  }
+  const used = hist.used;
   const pool = (await headlines()).filter(allowed).filter((h) => !used.has(h.url));
   if (!pool.length) { log('no usable headlines, skipping this run'); return; }
   const h = pool[Math.floor(Math.random() * Math.min(pool.length, 12))];
   const keys = Object.keys(AUTHORS);
   const author = Math.random() < 0.4 ? 'derek' : keys[Math.floor(Math.random() * keys.length)];
   log('headline:', h.source, '|', h.title, '| author:', author);
-  const a = await write(h, author);
+  const a = await write(h, author, hist.lastModel);
   const row = { author, source_title: h.title, source_url: h.url, source_name: h.source, ...a };
   if (process.env.DRY_RUN) { console.log(JSON.stringify(row, null, 2)); return; }
   const r = await sb('/rest/v1/news_articles', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(row) });
