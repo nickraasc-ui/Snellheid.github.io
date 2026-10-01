@@ -1,0 +1,2 @@
+# Monthly keepalive: repo activity so GitHub keeps scheduled workflows (Newsroom) enabled.
+2026-10-01
