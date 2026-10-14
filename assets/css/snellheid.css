@@ -531,3 +531,6 @@ html.synergy main > * { animation: merge 1.4s ease-in-out; }
 .post-actions button.on { color: var(--hot); }
 .post-source { margin: 8px 0 0; }
 .post-source a { color: var(--bg-3); }
+.post-share { background: none; border: 0; padding: 6px 0 0; font: 700 .9rem var(--body); color: var(--bg-3); cursor: pointer; }
+.post-share:hover { color: var(--hot); }
+.post.post-focus { box-shadow: 0 0 0 4px var(--hot), 10px 10px 0 var(--black); }

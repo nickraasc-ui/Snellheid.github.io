@@ -41,7 +41,7 @@
   function card(a) {
     var L = Snel.lang(), p = (window.SNEL_PEOPLE || {})[a.author] || { name: a.author };
     var title = L === 'nl' ? a.title_nl : a.title_en, body = L === 'nl' ? a.body_nl : a.body_en;
-    return '<article class="card post" data-id="' + (+a.id) + '">' +
+    return '<article class="card post" id="post-' + (+a.id) + '" data-id="' + (+a.id) + '">' +
       '<header class="post-head"><span class="post-avatar">' + (window.SnelAvatar ? SnelAvatar(Object.assign({ label: p.name }, p)) : '') + '</span>' +
       '<div><b>' + esc(p.name) + '</b> <span class="fine">· ' + Snel.t({ en: '1st', nl: '1e' }) + '</span><br>' +
       '<span class="fine">' + esc(Snel.t(TITLES[a.author] || { en: '', nl: '' })) + '</span><br>' +
@@ -51,6 +51,7 @@
       '<div class="post-body clamp">' + esc(body) + '</div>' +
       '<button class="more" type="button">' + Snel.t({ en: '…see more', nl: '…meer weergeven' }) + '</button>' +
       '<div class="post-react">' + reactHtml(a) + '</div>' +
+      '<button type="button" class="post-share" data-share>↗ ' + Snel.t({ en: 'Share', nl: 'Delen' }) + '</button>' +
       '<p class="post-source fine">' + Snel.t({ en: 'Loosely inspired by a real headline', nl: 'Losjes geïnspireerd op een echte kop' }) + ' (' + esc(a.source_name || '') + '): <a href="' + esc(safeUrl(a.source_url)) + '" target="_blank" rel="noopener nofollow">' + esc(a.source_title) + '</a></p>' +
       '</article>';
   }
@@ -60,6 +61,17 @@
     if (!feed) return;
     var status = document.getElementById('feed-status'), moreBtn = document.getElementById('feed-more');
     var rows = [], done = false;
+    // Shared links look like news.html#post-42: show that post even if it's older than the first page.
+    var target = (location.hash.match(/^#post-(\d+)$/) || [])[1];
+    function focusTarget() {
+      if (!target) return;
+      var el = document.getElementById('post-' + target);
+      if (!el) return;
+      el.classList.add('post-focus');
+      var body = el.querySelector('.post-body'); body.classList.remove('clamp'); el.querySelector('.more').hidden = true;
+      el.scrollIntoView({ block: 'start' });
+      target = null; // only once
+    }
     function render() {
       feed.innerHTML = rows.map(card).join('');
       feed.querySelectorAll('.post-body').forEach(function (b) {
@@ -73,9 +85,18 @@
       status.textContent = Snel.t({ en: 'Refreshing the thought leadership…', nl: 'Thought leadership wordt ververst…' });
       Snel.cloud('/rest/v1/news_articles?select=*&order=created_at.desc&limit=' + PAGE + '&offset=' + rows.length).then(function (r) {
         r = r || [];
-        rows = rows.concat(r); done = r.length < PAGE;
+        rows = rows.concat(r.filter(function (x) { return !rows.some(function (y) { return y.id === x.id; }); })); done = r.length < PAGE;
         status.textContent = rows.length ? '' : Snel.t({ en: 'The newsroom is in a meeting. The first article drops within 4 hours.', nl: 'De redactie zit in een vergadering. Het eerste artikel verschijnt binnen 4 uur.' });
-        moreBtn.disabled = false; render();
+        moreBtn.disabled = false;
+        if (target && !rows.some(function (x) { return String(x.id) === target; })) {
+          // linked post isn't on this page: fetch it and put it on top
+          Snel.cloud('/rest/v1/news_articles?select=*&id=eq.' + target).then(function (one) {
+            if (one && one[0]) rows.unshift(one[0]);
+            render(); focusTarget();
+          }, function () { render(); });
+          return;
+        }
+        render(); focusTarget();
       }, function () {
         moreBtn.disabled = false;
         status.textContent = Snel.t({ en: 'The newsroom is offline. Derek is recharging his personal brand.', nl: 'De redactie is offline. Derek laadt zijn personal brand op.' });
@@ -84,6 +105,8 @@
     feed.addEventListener('click', function (e) {
       var m = e.target.closest('.more');
       if (m) { m.previousElementSibling.classList.remove('clamp'); m.hidden = true; return; }
+      var sh = e.target.closest('[data-share]');
+      if (sh) { share(sh.closest('.post')); return; }
       var r = e.target.closest('[data-react]');
       if (!r || r.disabled) return;
       var el = r.closest('.post'), id = +el.getAttribute('data-id'), kind = r.getAttribute('data-react');
@@ -103,6 +126,20 @@
         Snel.toast(Snel.t({ en: '❌ Your reaction was circled back. Try again later.', nl: '❌ Er wordt op je reactie teruggekomen. Probeer het later opnieuw.' }));
       });
     });
+    function share(el) {
+      var id = +el.getAttribute('data-id'), row = rows.filter(function (x) { return x.id === id; })[0];
+      var L = Snel.lang(), title = L === 'nl' ? row.title_nl : row.title_en;
+      var who = ((window.SNEL_PEOPLE || {})[row.author] || { name: row.author }).name;
+      var url = location.origin + location.pathname + '#post-' + id;
+      var text = '“' + title + '” — ' + who + ', Snellheid Industries™';
+      if (navigator.share) {
+        // phones: native share sheet (WhatsApp, Signal, …); cancelling is fine
+        navigator.share({ title: title, text: text, url: url }).catch(function () {});
+      } else {
+        window.open('https://wa.me/?text=' + encodeURIComponent(text + '\n' + url), '_blank', 'noopener');
+      }
+      Snel.bump(1, { en: 'Thought leadership went viral', nl: 'Thought leadership ging viraal' });
+    }
     moreBtn.addEventListener('click', load);
     document.addEventListener('snel:lang', render);
     load();
