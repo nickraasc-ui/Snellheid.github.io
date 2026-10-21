@@ -41,7 +41,7 @@ create table public.shop_orders (
 alter table public.shop_orders enable row level security;
 -- (deliberately no policies: the publishable key can neither read nor write orders)
 
--- Starter catalogue. PRICES ARE ESTIMATES: set price_eur to (Printful product + shipping to NL) × 1.035 + 0.35 (PayPal fee)
+-- Starter catalogue. PRICES ARE ESTIMATES: set price_eur to (Printful product + shipping to Germany) × 1.035 + 0.35 (PayPal fee)
 -- once you see the real numbers in Printful. Products stay "opening soon" until a Printful ID is filled in.
 insert into public.shop_products (sku, name_en, name_nl, blurb_en, blurb_nl, price_eur, image_url, print_file_url, max_qty, sort) values
 ('mug-logo', 'Logo Mug', 'Logomok',

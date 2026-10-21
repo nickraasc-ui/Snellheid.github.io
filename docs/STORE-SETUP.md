@@ -63,7 +63,7 @@ Each shop item needs to know which Printful product to print our design on. The 
 
 The print files are already online (`https://www.snellheid.com/assets/merch/print/…`), and the function sends them along with each order.
 
-**Prices:** the starter prices are estimates. Check Printful's cost for each product plus shipping to the Netherlands, then set `price_eur` in **Table Editor → shop_products**. At cost: `(product + shipping) × 1.035 + 0.35` covers PayPal's fee.
+**Prices:** the starter prices are estimates. Check Printful's cost for each product plus shipping to Germany, then set `price_eur` in **Table Editor → shop_products**. At cost: `(product + shipping) × 1.035 + 0.35` covers PayPal's fee.
 
 ## 6. Turn the PayPal buttons on (Claude)
 
