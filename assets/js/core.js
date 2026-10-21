@@ -92,6 +92,7 @@
       '<li><a href="breakroom.html#meeting">' + bi('Meeting Simulator', 'Vergadersimulator') + '</a></li>' +
       '<li><a href="breakroom.html#flappy">Flappy Snail</a></li></ul></div>' +
       '<div><h4>' + bi('Legal-ish', 'Juridisch-achtig') + '</h4><ul>' +
+      '<li><a href="legal.html">' + bi('Imprint & Privacy', 'Impressum & privacy') + '</a></li>' +
       '<li><a href="investors.html#risks">' + bi('Risk Factors', 'Risicofactoren') + '</a></li>' +
       '<li><a href="portal.html">' + (unlocked ? '🔓 ' : '🔒 ') + bi('Employee Portal', 'Medewerkersportaal') + '</a></li>' +
       '<li><a href="404.html">' + bi('Our Commitment to Uptime', 'Onze uptime-belofte') + '</a></li></ul></div>' +
