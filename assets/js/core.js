@@ -33,7 +33,8 @@
     ['investors.html', 'Investors', 'Investeerders'],
     ['news.html', 'Newsroom', 'Nieuws'],
     ['careers.html', 'Careers', 'Vacatures'],
-    ['breakroom.html', 'Break Room', 'Kantine']
+    ['breakroom.html', 'Break Room', 'Kantine'],
+    ['shop.html', 'Store', 'Winkel']
   ];
   function bi(en, nl) { return '<span data-l="en">' + en + '</span><span data-l="nl">' + nl + '</span>'; }
 

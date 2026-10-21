@@ -17,6 +17,7 @@ A static site in plain HTML, CSS and JS. There is no build step, framework or de
 | `careers.html` | Values, benefits, jobs with a runaway submit button, Performance Review Generator with certificate download |
 | `breakroom.html` | Meeting Simulator with buzzword bingo, and Flappy Snail |
 | `news.html` | Newsroom: AI-written LinkedIn slop, loosely inspired by real headlines |
+| `shop.html` | Company Store: made-on-demand mugs and stickers, 2-click PayPal checkout, fulfilled by Printful |
 | `portal.html` | Secret employee portal (codeword or Konami code) |
 | `404.html` | "I'll be back." |
 
@@ -59,6 +60,15 @@ Shared data (the Flappy Snail leaderboard, the $SNEL price and news articles) li
 3. inserts it into the `news_articles` table.
 
 It needs two repository secrets: `OPENROUTER_API_KEY` and `SUPABASE_SECRET_KEY`. The optional repository variable `OPENROUTER_MODEL` pins a model (e.g. a paid DeepSeek model if the free ones are flaky). Test it with **Actions → Newsroom → Run workflow**. To remove an article, delete its row in Supabase → Table Editor → `news_articles`.
+
+## Company Store
+
+`shop.html` + `assets/js/shop.js` show products from the Supabase table `shop_products`, each with a PayPal button. The Supabase Edge Function `supabase/functions/shop/index.ts`:
+1. creates the PayPal order, with the price taken from the database, never from the browser;
+2. captures the payment and checks the amount;
+3. places the order at Printful with the buyer's PayPal shipping address.
+
+Every order is logged in the private `shop_orders` table. Print files are in `assets/merch/print/`. Setup, testing and going live: **[docs/STORE-SETUP.md](docs/STORE-SETUP.md)**.
 
 ## Run locally
 

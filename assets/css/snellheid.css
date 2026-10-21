@@ -534,3 +534,8 @@ html.synergy main > * { animation: merge 1.4s ease-in-out; }
 .post-share { background: none; border: 0; padding: 6px 0 0; font: 700 .9rem var(--body); color: var(--bg-3); cursor: pointer; }
 .post-share:hover { color: var(--hot); }
 .post.post-focus { box-shadow: 0 0 0 4px var(--hot), 10px 10px 0 var(--black); }
+
+/* ---- Company Store ------------------------------------------------------ */
+.shop-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 3px solid var(--black); margin-bottom: 14px; background: var(--peach); }
+.shop-item .pp-btn { margin-top: 10px; min-height: 45px; }
+.shop-item .price { padding-top: 0; }
