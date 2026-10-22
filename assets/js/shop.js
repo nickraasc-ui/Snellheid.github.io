@@ -43,7 +43,7 @@
     var box = document.getElementById('shop-done');
     var ok = res && res.status === 'ok';
     box.innerHTML = ok
-      ? Snel.t({ en: '🎉 <b>Order #' + res.order + ' placed.</b> It will be made just for you and shipped to the address in your PayPal account. Production + delivery usually takes 3–8 working days.', nl: '🎉 <b>Bestelling #' + res.order + ' geplaatst.</b> Hij wordt speciaal voor jou gemaakt en verstuurd naar het adres in je PayPal-account. Productie + levering duurt meestal 3–8 werkdagen.' })
+      ? Snel.t({ en: '🎉 <b>Order #' + res.order + ' placed.</b> It will be made just for you and shipped to the address in your PayPal account. Production + delivery can take up to 4 weeks. Patience is a core value.', nl: '🎉 <b>Bestelling #' + res.order + ' geplaatst.</b> Hij wordt speciaal voor jou gemaakt en verstuurd naar het adres in je PayPal-account. Productie + levering kan tot 4 weken duren. Geduld is een kernwaarde.' })
       : Snel.t({ en: '✅ <b>Payment received</b> (order #' + (res && res.order) + '). The factory needs a human to look at it, so this one may take a little longer. No action needed from you.', nl: '✅ <b>Betaling ontvangen</b> (bestelling #' + (res && res.order) + '). De fabriek heeft even een mens nodig, dus deze kan iets langer duren. Je hoeft niets te doen.' });
     box.hidden = false;
     box.scrollIntoView({ behavior: 'smooth', block: 'center' });
