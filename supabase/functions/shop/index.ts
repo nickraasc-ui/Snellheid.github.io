@@ -74,6 +74,11 @@ async function create(sku: unknown, qty: unknown) {
   if (!p.printful_sync_variant_id && !(p.printful_variant_id && p.print_file_url)) throw new Fail(409, "product not orderable yet");
   if (!Number.isInteger(n) || n < 1 || n > p.max_qty) throw new Fail(400, "bad quantity");
 
+  // Bot brake: unpaid checkouts are free to create, so cap them shop-wide.
+  const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const recent = await db(`shop_orders?select=id&status=eq.created&created_at=gte.${since}&limit=21`);
+  if ((recent?.length ?? 0) >= 20) throw new Fail(429, "too many checkouts, try again in a few minutes");
+
   const unit = money(Number(p.price_eur)), total = money(Number(p.price_eur) * n);
   const res = await paypal("/v2/checkout/orders", {
     intent: "CAPTURE",
@@ -135,7 +140,8 @@ async function capture(orderID: unknown) {
       : { variant_id: p.printful_variant_id, quantity: o.qty, files: [{ url: p.print_file_url }] };
     const headers: Record<string, string> = { Authorization: `Bearer ${env("PRINTFUL_TOKEN")}`, "Content-Type": "application/json" };
     if (env("PRINTFUL_STORE_ID")) headers["X-PF-Store-Id"] = env("PRINTFUL_STORE_ID");
-    const confirm = env("PRINTFUL_AUTO_CONFIRM") === "true";
+    // Never auto-produce on sandbox payments: anyone can "pay" with fake sandbox money.
+    const confirm = env("PRINTFUL_AUTO_CONFIRM") === "true" && env("PAYPAL_ENV") === "live";
     const r = await fetch(`${PRINTFUL_API}/orders${confirm ? "?confirm=true" : ""}`, {
       method: "POST", headers,
       body: JSON.stringify({ external_id: `snel-${o.id}`, recipient, items: [item] }),

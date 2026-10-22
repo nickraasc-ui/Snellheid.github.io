@@ -81,7 +81,7 @@ Send Claude your **sandbox Client ID**. It's public by design, and it's safe to 
 1. You need a **PayPal Business account** (free; you can convert your personal one). On developer.paypal.com, switch the toggle to **Live**, create the app again, and copy the live Client ID and Secret.
 2. Supabase secrets: `PAYPAL_CLIENT_ID` = live ID, `PAYPAL_SECRET` = live secret, `PAYPAL_ENV` = `live`.
 3. Send Claude the **live Client ID** for the website.
-4. Optional, once you trust it: set `PRINTFUL_AUTO_CONFIRM` = `true`, and paid orders go straight into production. Until then, confirm each draft in Printful yourself; it takes one click per order.
+4. Optional, once you trust it: set `PRINTFUL_AUTO_CONFIRM` = `true`, and paid orders go straight into production. This only takes effect when `PAYPAL_ENV` = `live`, because sandbox payments are fake and anyone can make them. Until then, confirm each draft in Printful yourself; it takes one click per order. For a friends-only shop, keeping it off is the best protection against fraud: you only confirm orders from people you know.
 
 ## When something goes wrong
 
