@@ -9,7 +9,8 @@
 //   PRINTFUL_TOKEN, PRINTFUL_STORE_ID (optional), PRINTFUL_AUTO_CONFIRM ("true" sends orders to production;
 //   anything else leaves them as drafts in Printful for you to confirm by hand)
 //   ALLOWED_ORIGINS (optional, comma-separated; default https://www.snellheid.com)
-// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase automatically.
+//   SHOP_DB_KEY: your Supabase secret key (sb_secret_…), so the function can read products and write orders.
+// SUPABASE_URL is provided by Supabase automatically.
 
 const env = (k: string, d = "") => (Deno.env.get(k) ?? d).trim();
 
@@ -17,7 +18,8 @@ const PAYPAL_API = env("PAYPAL_API_BASE") ||
   (env("PAYPAL_ENV", "sandbox") === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com");
 const PRINTFUL_API = env("PRINTFUL_API_BASE", "https://api.printful.com");
 const SB_URL = env("SUPABASE_URL");
-const SB_KEY = env("SUPABASE_SERVICE_ROLE_KEY") || env("SUPABASE_SECRET_KEY");
+// Prefer the project secret key you set yourself (SHOP_DB_KEY); fall back to the legacy key Supabase injects.
+const SB_KEY = env("SHOP_DB_KEY") || env("SUPABASE_SERVICE_ROLE_KEY");
 const ORIGINS = env("ALLOWED_ORIGINS", "https://www.snellheid.com,https://snellheid.com").split(",").map((s) => s.trim());
 
 // ---------- helpers ----------

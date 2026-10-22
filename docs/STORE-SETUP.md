@@ -45,6 +45,7 @@ This creates the product list (public) and the orders table (private: holds name
    | `PAYPAL_SECRET` | Secret from step 2 |
    | `PAYPAL_ENV` | `sandbox` |
    | `PRINTFUL_TOKEN` | token from step 3 |
+   | `SHOP_DB_KEY` | your Supabase **secret key** (`sb_secret_…`, the same one you gave GitHub for the Newsroom) |
 
    Leave `PRINTFUL_AUTO_CONFIRM` unset for now, so orders arrive in Printful as **drafts**.
 
