@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   // PayPal REST app client ID (public by design). Sandbox ID for testing, live ID when the boys can really order.
-  var PAYPAL_CLIENT_ID = 'PASTE_PAYPAL_CLIENT_ID';
+  var PAYPAL_CLIENT_ID = 'BAAADvEJFjFm2BQhaNnbs-bteOy3_XYbiXah_fck3QJq5jd9Eodsw_W3_gK9Ed6olH1LcqMpfiqwwWW1dQ'; // sandbox
 
   // Shown until the shop_products table exists (and as the fallback if Supabase is unreachable).
   var PREVIEW = [
