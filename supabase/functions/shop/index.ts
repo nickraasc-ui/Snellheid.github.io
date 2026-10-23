@@ -1,7 +1,8 @@
 // Snellheid Merch Store — Supabase Edge Function "shop".
 //
 // Actions, all POST JSON to /functions/v1/shop:
-//   { action: "create",  sku, qty }      → creates a PayPal order (price comes from shop_products, never the browser)
+//   { action: "unlock",  password }      → checks the store password (200 ok / 401), so the page can show the shop
+//   { action: "create",  sku, qty, password } → creates a PayPal order (price comes from shop_products, never the browser)
 //   { action: "capture", orderID }       → captures the payment, verifies it, then places the Printful order
 //                                          (Slop Machine products are queued instead: their design doesn't exist yet)
 //   { action: "place", id }              → Slop Machine only: places the Printful draft once scripts/slopfactory.mjs
@@ -11,6 +12,7 @@
 //   PAYPAL_CLIENT_ID, PAYPAL_SECRET, PAYPAL_ENV ("sandbox" | "live")
 //   PRINTFUL_TOKEN, PRINTFUL_STORE_ID (optional), PRINTFUL_AUTO_CONFIRM ("true" sends orders to production;
 //   anything else leaves them as drafts in Printful for you to confirm by hand)
+//   SHOP_PASSWORD (optional): store password for the boys. When set, nobody can start a checkout without it.
 //   ALLOWED_ORIGINS (optional, comma-separated; default https://www.snellheid.com)
 //   SHOP_DB_KEY: your Supabase secret key (sb_secret_…), so the function can read products and write orders.
 //   GITHUB_DISPATCH_TOKEN (optional): fine-grained GitHub token with Actions read/write on this repo only. Starts the
@@ -72,8 +74,21 @@ async function paypal(path: string, body: unknown, requestId?: string) {
 
 const money = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
+// Store password. Compared as hashes (constant length), and every wrong guess costs a second.
+async function sha(s: string) {
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function checkPassword(given: unknown) {
+  const want = env("SHOP_PASSWORD");
+  if (!want) return; // no password set: open store
+  if (typeof given === "string" && given.length <= 200 && await sha(given.trim().toLowerCase()) === await sha(want.toLowerCase())) return;
+  await new Promise((r) => setTimeout(r, 1000));
+  throw new Fail(401, "wrong password");
+}
+
 // ---------- actions ----------
-async function create(sku: unknown, qty: unknown) {
+async function create(sku: unknown, qty: unknown, password: unknown) {
+  await checkPassword(password);
   if (typeof sku !== "string" || !/^[a-z0-9-]{1,40}$/.test(sku)) throw new Fail(400, "bad sku");
   const n = Number(qty);
   const [p] = await db(`shop_products?sku=eq.${sku}&active=is.true&select=*`) ?? [];
@@ -221,7 +236,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405, origin);
   try {
     const body = await req.json().catch(() => ({}));
-    if (body.action === "create") return json(await create(body.sku, body.qty), 200, origin);
+    if (body.action === "unlock") { await checkPassword(body.password); return json({ ok: true }, 200, origin); }
+    if (body.action === "create") return json(await create(body.sku, body.qty, body.password), 200, origin);
     if (body.action === "capture") return json(await capture(body.orderID), 200, origin);
     if (body.action === "place") return json(await place(body.id, req.headers.get("x-shop-key")), 200, origin);
     throw new Fail(400, "unknown action");

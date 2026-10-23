@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
   <title data-en="Company Store — Snellheid Industries™" data-nl="Bedrijfswinkel — Snellheid Industries™">Company Store — Snellheid Industries™</title>
   <meta name="description" content="Snellheid Industries merch: made on demand, shipped to you, sold at cost.">
   <link rel="canonical" href="https://www.snellheid.com/shop.html">
@@ -18,7 +19,7 @@
   <link rel="stylesheet" href="assets/css/snellheid.css?v=202610220516">
   <script>(function(){var l;try{l=JSON.parse(localStorage.getItem('snel-lang'))}catch(e){}l=l||((navigator.language||'').toLowerCase().indexOf('nl')===0?'nl':'en');document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l})()</script>
   <script src="assets/js/core.js?v=202610220516" defer></script>
-  <script src="assets/js/shop.js?v=202610231400" defer></script>
+  <script src="assets/js/shop.js?v=202610231800" defer></script>
 </head>
 <body>
 <div id="site-header"></div>
@@ -33,12 +34,20 @@
 
   <section style="padding-top:0">
     <div class="wrap">
+      <div id="shop-gate" class="card" style="max-width:560px;margin:0 auto 24px" hidden>
+        <h3>🔒 <span data-l="en">Employees only</span><span data-l="nl">Alleen voor medewerkers</span></h3>
+        <p><span data-l="en">The Company Store is for the Snellheid family. Enter the store password to continue. Wrong guesses are reported to HR.</span><span data-l="nl">De bedrijfswinkel is voor de Snellheid-familie. Vul het winkelwachtwoord in om verder te gaan. Foute pogingen worden gemeld bij HR.</span></p>
+        <form id="shop-gate-form">
+          <div class="field"><label for="shop-pass"><span data-l="en">Store password</span><span data-l="nl">Winkelwachtwoord</span></label><input id="shop-pass" type="password" autocomplete="current-password" maxlength="200" required></div>
+          <button class="btn hot" type="submit"><span data-l="en">Badge in</span><span data-l="nl">Inchecken</span></button>
+        </form>
+      </div>
       <div id="shop-done" class="card" style="background:var(--peach);color:var(--black);border-color:var(--black);margin-bottom:24px" hidden aria-live="polite"></div>
-      <div class="grid grid-4" id="shop-grid"></div>
+      <div class="grid grid-4" id="shop-grid" hidden></div>
     </div>
   </section>
 
-  <section style="padding-top:0">
+  <section style="padding-top:0" id="slop-section" hidden>
     <div class="wrap">
       <span class="eyebrow"><span data-l="en">New · The Slop Machine™</span><span data-l="nl">Nieuw · De Slop Machine™</span></span>
       <h2><span data-l="en">Merch designed by AI.<br>Approved by nobody.</span><span data-l="nl">Merch ontworpen door AI.<br>Goedgekeurd door niemand.</span></h2>

@@ -14,6 +14,19 @@
     { sku: 'slop-sticker', slop: true, name_en: 'Mystery Slop Sticker', name_nl: 'Mysterie-Slopsticker', blurb_en: 'Unique AI-generated corporate fever dream, 3×3 in. Could be a Renaissance masterpiece. Could be a layoff death match poster.', blurb_nl: 'Unieke AI-gegenereerde bedrijfskoortsdroom, 7,5×7,5 cm. Kan een renaissance-meesterwerk zijn. Kan een ontslag-deathmatchposter zijn.', image_url: 'assets/merch/slop-sticker.jpg', max_qty: 1 }
   ];
 
+  // Store password: the shop function checks it; the browser only remembers what the visitor typed.
+  var PASS_KEY = 'snel-shop-pass';
+  function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch (e) { return ''; } }
+  function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch (e) { /* private mode: ask again next time */ } }
+  function unlock(pw) { return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'unlock', password: pw } }); }
+  var denied = function (e) { return e && e.message === 'cloud 401'; };
+  function lock(on) {
+    document.getElementById('shop-gate').hidden = !on;
+    document.getElementById('shop-grid').hidden = on;
+    var slop = document.getElementById('slop-section'); if (slop) slop.hidden = on;
+    if (on) setTimeout(function () { document.getElementById('shop-pass').focus(); }, 50);
+  }
+
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function eur(n) { return '€' + (+n).toLocaleString(Snel.lang() === 'nl' ? 'nl-NL' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   var configured = PAYPAL_CLIENT_ID && PAYPAL_CLIENT_ID.indexOf('PASTE') !== 0;
@@ -67,7 +80,10 @@
         style: { layout: 'horizontal', tagline: false, height: 45, label: 'pay' },
         createOrder: function () {
           var qty = +el.querySelector('.shop-qty').value || 1;
-          return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'create', sku: p.sku, qty: qty } }).then(function (r) { return r.id; });
+          return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'create', sku: p.sku, qty: qty, password: getPass() } }).then(function (r) { return r.id; }, function (e) {
+            if (denied(e)) { setPass(''); lock(true); }
+            throw e;
+          });
         },
         onApprove: function (data) {
           return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'capture', orderID: data.orderID } }).then(done, function () {
@@ -91,6 +107,20 @@
       if (configured && products.some(function (p) { return p.orderable; })) loadPayPal(function () { mountButtons(products); });
     }
     render();
+    // Only a 401 means "locked"; if the check itself fails, show the shop and let checkout decide.
+    unlock(getPass()).then(function () { lock(false); }, function (e) { lock(denied(e)); });
+    document.getElementById('shop-gate-form').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = document.getElementById('shop-pass'), pw = input.value.trim();
+      unlock(pw).then(function () {
+        setPass(pw); input.value = ''; lock(false);
+        Snel.toast(Snel.t({ en: '✅ Badge accepted. Welcome back to the family.', nl: '✅ Badge geaccepteerd. Welkom terug in de familie.' }));
+      }, function (e) {
+        if (!denied(e)) { lock(false); return; }
+        input.value = '';
+        Snel.toast(Snel.t({ en: '❌ Access denied. HR has been notified.', nl: '❌ Toegang geweigerd. HR is op de hoogte gebracht.' }));
+      });
+    });
     Snel.cloud('/rest/v1/shop_products?select=sku,name_en,name_nl,blurb_en,blurb_nl,price_eur,image_url,max_qty,slop,printful_sync_variant_id,printful_variant_id,print_file_url&order=sort').then(function (rows) {
       if (!rows || !rows.length) return;
       products = rows.map(function (r) { r.orderable = !!(r.printful_sync_variant_id || (r.printful_variant_id && (r.print_file_url || r.slop))); return r; });

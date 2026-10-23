@@ -47,6 +47,8 @@ This creates the product list (public) and the orders table (private: holds name
    | `PRINTFUL_TOKEN` | token from step 3 |
    | `SHOP_DB_KEY` | your Supabase **secret key** (`sb_secret_…`, the same one you gave GitHub for the Newsroom) |
 
+   | `SHOP_PASSWORD` | the store password for the boys (optional; without it the store is open to everyone) |
+
    Leave `PRINTFUL_AUTO_CONFIRM` unset for now, so orders arrive in Printful as **drafts**.
 
 ## 5. Link each product to what Printful should make (5 min)
