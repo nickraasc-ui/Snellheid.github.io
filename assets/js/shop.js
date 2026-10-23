@@ -25,7 +25,7 @@
       '<img src="' + esc(p.image_url) + '" alt="' + esc(L === 'nl' ? p.name_nl : p.name_en) + '" loading="lazy" class="shop-img">' +
       '<h3>' + esc(L === 'nl' ? p.name_nl : p.name_en) + '</h3>' +
       '<p>' + esc(L === 'nl' ? p.blurb_nl : p.blurb_en) + '</p>' +
-      (p.price_eur ? '<div class="row"><span class="price">' + eur(p.price_eur) + '</span><span class="fine">' + Snel.t({ en: 'incl. shipping · at cost', nl: 'incl. verzending · kostprijs' }) + '</span></div>' : '') +
+      (p.price_eur ? '<div class="row"><span class="price">' + eur(p.price_eur) + '</span><span class="fine">' + (p.slop ? Snel.t({ en: 'incl. shipping · AI efficiency premium', nl: 'incl. verzending · AI-efficiëntiepremie' }) : Snel.t({ en: 'incl. shipping · at cost', nl: 'incl. verzending · kostprijs' })) + '</span></div>' : '') +
       (live
         ? ((p.max_qty || 5) > 1
           ? '<label class="fine" style="margin-top:12px">' + Snel.t({ en: 'Quantity', nl: 'Aantal' }) + ' <select class="shop-qty" style="width:auto;padding:4px 10px">' + opts + '</select></label>'

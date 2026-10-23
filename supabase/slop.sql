@@ -16,9 +16,9 @@ insert into public.shop_products (sku, name_en, name_nl, blurb_en, blurb_nl, pri
 ('slop-mug', 'Mystery Slop Mug', 'Mysterie-Slopmok',
  'A one-of-a-kind design by our AI Chief Creative Officer. Nobody prompts it. You see it when it arrives. 11 oz.',
  'Een uniek ontwerp van onze AI Chief Creative Officer. Niemand geeft een prompt. Je ziet het pas als het binnenkomt. 330 ml.',
- 13.50, 'assets/merch/slop-mug.jpg', 1320, 1, 5, true),
+ 20.00, 'assets/merch/slop-mug.jpg', 1320, 1, 5, true),
 ('slop-sticker', 'Mystery Slop Sticker', 'Mysterie-Slopsticker',
  'Unique AI-generated corporate fever dream, 3×3 in. Could be a Renaissance masterpiece. Could be a layoff death match poster.',
  'Unieke AI-gegenereerde bedrijfskoortsdroom, 7,5×7,5 cm. Kan een renaissance-meesterwerk zijn. Kan een ontslag-deathmatchposter zijn.',
- 7.50, 'assets/merch/slop-sticker.jpg', 10163, 1, 6, true)
+ 10.00, 'assets/merch/slop-sticker.jpg', 10163, 1, 6, true)
 on conflict (sku) do nothing;
