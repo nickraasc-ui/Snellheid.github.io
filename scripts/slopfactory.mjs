@@ -157,8 +157,8 @@ async function printFile(kind, art) {
     .png().toBuffer();
 }
 
-async function upload(name, png) {
-  const r = await sb(`/storage/v1/object/slop/${name}`, { method: 'POST', headers: { 'Content-Type': 'image/png', 'x-upsert': 'true' }, body: png });
+async function upload(name, data, type = 'image/png') {
+  const r = await sb(`/storage/v1/object/slop/${name}`, { method: 'POST', headers: { 'Content-Type': type, 'x-upsert': 'true' }, body: data });
   if (!r.ok) throw new Error(`upload ${r.status}: ${(await r.text()).slice(0, 200)}`);
   return `${SUPABASE_URL}/storage/v1/object/public/slop/${name}`;
 }
@@ -207,9 +207,13 @@ async function main() {
     const kind = KINDS[process.env.SAMPLE] ? process.env.SAMPLE : 'sticker';
     const { idea, png } = await design(kind);
     if (process.env.DRY_RUN) { await writeFile(`slop-sample-${kind}.png`, png); log(`saved slop-sample-${kind}.png`); return; }
-    const url = await upload(`samples/${Date.now()}-${randomBytes(6).toString('hex')}.png`, png);
+    const name = `samples/${Date.now()}-${randomBytes(6).toString('hex')}`;
+    const url = await upload(`${name}.png`, png);
+    // The full mug print file is too big for GitHub's image proxy, so the summary shows a small JPEG and links the original.
+    const { default: sharp } = await import('sharp');
+    const preview = await upload(`${name}-preview.jpg`, await sharp(png).resize({ width: 1200 }).jpeg({ quality: 82 }).toBuffer(), 'image/jpeg');
     log('sample:', url);
-    if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Slop sample (${kind})\n\n![sample](${url})\n\n<details><summary>Prompt</summary>\n\n${idea.prompt}\n\n</details>\n`);
+    if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Slop sample (${kind})\n\n[![sample](${preview})](${url})\n\n[Full print file](${url})\n\n<details><summary>Prompt</summary>\n\n${idea.prompt}\n\n</details>\n`);
     return;
   }
   if (!process.env.SUPABASE_SECRET_KEY) { log('not configured (SUPABASE_SECRET_KEY missing). Skipping.'); process.exit(process.env.PEEK ? 1 : 0); }
