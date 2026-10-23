@@ -136,6 +136,8 @@ async function draw(kind, idea) {
         }),
       });
       const d = await r.json().catch(() => ({}));
+      // A real key is "sk-or-v1-" + 64 hex characters; show only its shape, never the key.
+      if (r.status === 401) throw new Error(`401 ${JSON.stringify(d.error || d).slice(0, 120)} — key starts with "${key.slice(0, 9)}", ${key.length} chars (a valid one starts with "sk-or-v1-" and has 73)`);
       if (!r.ok) throw new Error(`${r.status} ${JSON.stringify(d.error || d).slice(0, 200)}`);
       const url = d.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (!url) throw new Error(`no image in reply: ${JSON.stringify(d.choices?.[0]?.message?.content || d).slice(0, 200)}`);
