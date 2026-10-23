@@ -143,7 +143,7 @@ async function capture(orderID: unknown) {
   try {
     const [p] = await db(`shop_products?sku=eq.${o.sku}&select=slop,printful_sync_variant_id,printful_variant_id,print_file_url`);
     if (p.slop) {
-      // Slop Machine: the hourly job (scripts/slopfactory.mjs) designs it, then calls "place".
+      // Slop Machine: the workflow (scripts/slopfactory.mjs) designs it, then calls "place".
       await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "slop_queued" }) });
       await startSlopMachine();
       return { status: "slop", order: o.id };
