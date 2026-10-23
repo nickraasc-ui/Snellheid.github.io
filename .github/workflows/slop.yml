@@ -34,5 +34,6 @@ jobs:
         env:
           SAMPLE: ${{ inputs.sample != 'none' && inputs.sample || '' }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_SLOP_KEY: ${{ secrets.OPENROUTER_SLOP_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           SLOP_IMAGE_MODEL: ${{ vars.SLOP_IMAGE_MODEL }}

@@ -9,7 +9,8 @@
 // Failures go back to the queue and are retried next hour; after MAX_ATTEMPTS the order becomes "needs_attention".
 //
 // Env (GitHub secrets / variables):
-//   OPENROUTER_API_KEY, SUPABASE_SECRET_KEY   required
+//   SUPABASE_SECRET_KEY   required
+//   OPENROUTER_SLOP_KEY   OpenRouter key for images (its own spending limit); falls back to OPENROUTER_API_KEY
 //   SLOP_IMAGE_MODEL   optional, comma-separated OpenRouter model ids (default below, then other image models it finds)
 //   SAMPLE=mug|sticker optional; make one sample design, upload it under samples/ and print its URL. No order involved.
 //   PEEK=1             optional; exit 0 if there is work to do, 1 if not (lets the workflow skip installing sharp)
@@ -116,7 +117,7 @@ async function models() {
 }
 
 async function draw(kind, idea) {
-  const key = keyFrom('OPENROUTER_API_KEY', /^sk-or-/);
+  const key = keyFrom(process.env.OPENROUTER_SLOP_KEY ? 'OPENROUTER_SLOP_KEY' : 'OPENROUTER_API_KEY', /^sk-or-/);
   const logo = (await readFile(new URL('assets/img/logo-mark.png', ROOT))).toString('base64');
   let lastErr;
   for (const model of await models()) {
@@ -213,7 +214,7 @@ async function main() {
   const todo = await sbJson('/rest/v1/shop_orders?status=in.(slop_queued,slop_ready)&select=id,sku,status,slop_attempts&order=id&limit=5');
   if (process.env.PEEK) { log(`${todo.length} slop order(s) waiting`); process.exit(todo.length ? 0 : 1); }
   if (!todo.length) return log('nothing to make');
-  if (!process.env.OPENROUTER_API_KEY) throw new Error('Missing env OPENROUTER_API_KEY');
+  if (!process.env.OPENROUTER_SLOP_KEY && !process.env.OPENROUTER_API_KEY) throw new Error('Missing env OPENROUTER_SLOP_KEY');
   for (const o of todo) {
     if (o.status === 'slop_queued') await work(o);
     try { await place(o.id); } catch (e) { log(`order ${o.id} not placed yet:`, e.message); }

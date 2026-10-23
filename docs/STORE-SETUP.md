@@ -106,7 +106,7 @@ The prompt tells the model: no real brands, people or copyrighted characters, st
 
 1. Supabase → SQL Editor: run [`supabase/slop.sql`](../supabase/slop.sql). It adds the two products, the storage bucket and three columns.
 2. Redeploy the `shop` function with the new [`index.ts`](../supabase/functions/shop/index.ts).
-3. **OpenRouter credit.** Image models aren't free: roughly $0.04 per design. Add a few dollars at openrouter.ai → Credits, and set a limit on the key if you like. The key is the one the Newsroom already uses.
+3. **OpenRouter credit and a separate key.** Image models aren't free: roughly $0.04 per design. Add a few dollars at openrouter.ai → Credits. Create a **new** key named `slop` with a limit of $5, and add it as the GitHub repository secret `OPENROUTER_SLOP_KEY`. Keep the Newsroom key's limit at **$0**. That way the Newsroom can only ever use free models, and the credit is spent only by the Slop Machine.
 4. **Instant start** (optional; without it, orders are picked up by the hourly Newsroom run). Create a token at github.com → Settings → Developer settings → **Fine-grained tokens**:
    - Repository access: **only `Snellheid.github.io`**
    - Permissions: **Actions: Read and write** (nothing else)
