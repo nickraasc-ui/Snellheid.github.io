@@ -1,8 +1,11 @@
 // Snellheid Merch Store — Supabase Edge Function "shop".
 //
-// Two actions, both POST JSON to /functions/v1/shop:
+// Actions, all POST JSON to /functions/v1/shop:
 //   { action: "create",  sku, qty }      → creates a PayPal order (price comes from shop_products, never the browser)
 //   { action: "capture", orderID }       → captures the payment, verifies it, then places the Printful order
+//                                          (Slop Machine products are queued instead: their design doesn't exist yet)
+//   { action: "place", id }              → Slop Machine only: places the Printful draft once scripts/slopfactory.mjs
+//                                          has generated the design. Header x-shop-key must be a Supabase secret key.
 //
 // Secrets (Supabase → Edge Functions → Secrets):
 //   PAYPAL_CLIENT_ID, PAYPAL_SECRET, PAYPAL_ENV ("sandbox" | "live")
@@ -10,6 +13,8 @@
 //   anything else leaves them as drafts in Printful for you to confirm by hand)
 //   ALLOWED_ORIGINS (optional, comma-separated; default https://www.snellheid.com)
 //   SHOP_DB_KEY: your Supabase secret key (sb_secret_…), so the function can read products and write orders.
+//   GITHUB_DISPATCH_TOKEN (optional): fine-grained GitHub token with Actions read/write on this repo only. Starts the
+//   Slop Machine workflow the moment a slop order is paid; without it the hourly Newsroom run picks the order up.
 // SUPABASE_URL is provided by Supabase automatically.
 
 const env = (k: string, d = "") => (Deno.env.get(k) ?? d).trim();
@@ -73,7 +78,7 @@ async function create(sku: unknown, qty: unknown) {
   const n = Number(qty);
   const [p] = await db(`shop_products?sku=eq.${sku}&active=is.true&select=*`) ?? [];
   if (!p) throw new Fail(404, "unknown product");
-  if (!p.printful_sync_variant_id && !(p.printful_variant_id && p.print_file_url)) throw new Fail(409, "product not orderable yet");
+  if (!p.printful_sync_variant_id && !(p.printful_variant_id && (p.print_file_url || p.slop))) throw new Fail(409, "product not orderable yet");
   if (!Number.isInteger(n) || n < 1 || n > p.max_qty) throw new Fail(400, "bad quantity");
 
   // Bot brake: unpaid checkouts are free to create, so cap them shop-wide.
@@ -136,25 +141,76 @@ async function capture(orderID: unknown) {
 
   // Paid. Now ask Printful to make and ship it. If that fails the money is safe and the order is flagged for a human.
   try {
-    const [p] = await db(`shop_products?sku=eq.${o.sku}&select=printful_sync_variant_id,printful_variant_id,print_file_url`);
+    const [p] = await db(`shop_products?sku=eq.${o.sku}&select=slop,printful_sync_variant_id,printful_variant_id,print_file_url`);
+    if (p.slop) {
+      // Slop Machine: the hourly job (scripts/slopfactory.mjs) designs it, then calls "place".
+      await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "slop_queued" }) });
+      await startSlopMachine();
+      return { status: "slop", order: o.id };
+    }
     const item = p.printful_sync_variant_id
       ? { sync_variant_id: p.printful_sync_variant_id, quantity: o.qty }
       : { variant_id: p.printful_variant_id, quantity: o.qty, files: [{ url: p.print_file_url }] };
-    const headers: Record<string, string> = { Authorization: `Bearer ${env("PRINTFUL_TOKEN")}`, "Content-Type": "application/json" };
-    if (env("PRINTFUL_STORE_ID")) headers["X-PF-Store-Id"] = env("PRINTFUL_STORE_ID");
     // Never auto-produce on sandbox payments: anyone can "pay" with fake sandbox money.
     const confirm = env("PRINTFUL_AUTO_CONFIRM") === "true" && env("PAYPAL_ENV") === "live";
-    const r = await fetch(`${PRINTFUL_API}/orders${confirm ? "?confirm=true" : ""}`, {
-      method: "POST", headers,
-      body: JSON.stringify({ external_id: `snel-${o.id}`, recipient, items: [item] }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.result?.id) throw new Error(`printful ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
-    await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: confirm ? "submitted" : "draft_in_printful", printful_order_id: d.result.id }) });
+    const id = await printful(o, recipient, item, confirm);
+    await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: confirm ? "submitted" : "draft_in_printful", printful_order_id: id }) });
     return { status: "ok", order: o.id };
   } catch (e) {
     await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "needs_attention", note: String(e).slice(0, 500) }) });
     return { status: "paid_needs_attention", order: o.id };
+  }
+}
+
+// Kick off .github/workflows/slop.yml now instead of waiting for the hourly run. Best effort: the order is already queued.
+async function startSlopMachine() {
+  const token = env("GITHUB_DISPATCH_TOKEN");
+  if (!token) return;
+  try {
+    const r = await fetch(`${env("GITHUB_API_BASE", "https://api.github.com")}/repos/${env("GITHUB_REPO", "nickraasc-ui/Snellheid.github.io")}/actions/workflows/slop.yml/dispatches`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "User-Agent": "snellheid-shop", "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: "main" }),
+    });
+    if (!r.ok) console.error("slop dispatch", r.status, (await r.text()).slice(0, 200));
+  } catch (e) { console.error("slop dispatch", e); }
+}
+
+async function printful(o: { id: number }, recipient: unknown, item: unknown, confirm: boolean) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${env("PRINTFUL_TOKEN")}`, "Content-Type": "application/json" };
+  if (env("PRINTFUL_STORE_ID")) headers["X-PF-Store-Id"] = env("PRINTFUL_STORE_ID");
+  const r = await fetch(`${PRINTFUL_API}/orders${confirm ? "?confirm=true" : ""}`, {
+    method: "POST", headers,
+    body: JSON.stringify({ external_id: `snel-${o.id}`, recipient, items: [item] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.result?.id) throw new Error(`printful ${r.status}: ${JSON.stringify(d).slice(0, 300)}`);
+  return d.result.id as number;
+}
+
+// Slop Machine: the design is ready, send it to Printful. Always a draft, so a human looks at the slop before it's printed.
+async function place(id: unknown, key: string | null) {
+  const n = Number(id);
+  if (!Number.isInteger(n) || n < 1) throw new Fail(400, "bad id");
+  // Orders are invisible to the publishable key (no RLS policy), so a key that can read this one is a project secret key.
+  if (!key || !/^(sb_secret_|eyJ)[\w.-]+$/.test(key)) throw new Fail(401, "not allowed");
+  const headers: Record<string, string> = { apikey: key };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+  const check = await fetch(`${SB_URL}/rest/v1/shop_orders?id=eq.${n}&select=id`, { headers });
+  if (!check.ok || (await check.json()).length !== 1) throw new Fail(401, "not allowed");
+
+  const [o] = await db(`shop_orders?id=eq.${n}&status=eq.slop_ready`, {
+    method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ status: "placing" }),
+  }) ?? [];
+  if (!o) return { status: "not_ready" };
+  try {
+    const [p] = await db(`shop_products?sku=eq.${o.sku}&select=printful_variant_id`);
+    const pf = await printful(o, o.ship_to, { variant_id: p.printful_variant_id, quantity: o.qty, files: [{ url: o.print_file_url }] }, false);
+    await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "draft_in_printful", printful_order_id: pf }) });
+    return { status: "ok", order: o.id };
+  } catch (e) {
+    await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "needs_attention", note: String(e).slice(0, 500) }) });
+    return { status: "needs_attention", order: o.id };
   }
 }
 
@@ -167,6 +223,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     if (body.action === "create") return json(await create(body.sku, body.qty), 200, origin);
     if (body.action === "capture") return json(await capture(body.orderID), 200, origin);
+    if (body.action === "place") return json(await place(body.id, req.headers.get("x-shop-key")), 200, origin);
     throw new Fail(400, "unknown action");
   } catch (e) {
     if (e instanceof Fail) return json({ error: e.message }, e.status, origin);

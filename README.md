@@ -68,6 +68,8 @@ It needs two repository secrets: `OPENROUTER_API_KEY` and `SUPABASE_SECRET_KEY`.
 2. captures the payment and checks the amount;
 3. places the order at Printful with the buyer's PayPal shipping address.
 
+**Slop Machine™:** the "Mystery Slop" products get a unique AI design per order. After payment, the function starts `.github/workflows/slop.yml`, which runs `scripts/slopfactory.mjs`: an OpenRouter image model draws an over-the-top corporate concept, the real logo banner (`assets/merch/slop/`) is stamped on, and the result goes to Printful as a draft for a human to check.
+
 Every order is logged in the private `shop_orders` table. Print files are in `assets/merch/print/`. Setup, testing and going live: **[docs/STORE-SETUP.md](docs/STORE-SETUP.md)**.
 
 ## Run locally

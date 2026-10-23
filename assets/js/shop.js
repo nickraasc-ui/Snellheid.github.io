@@ -9,7 +9,9 @@
     { sku: 'mug-logo', name_en: 'Logo Mug', name_nl: 'Logomok', blurb_en: 'Snail-rocket on one side, "Moving fast. Circling back." on the other. 11 oz, dishwasher safe.', blurb_nl: 'Slak-raket aan de ene kant, "Moving fast. Circling back." aan de andere. 330 ml, vaatwasserbestendig.', image_url: 'assets/merch/mug-logo.jpg', max_qty: 5 },
     { sku: 'mug-email', name_en: '“Per my last email” Mug', name_nl: '“Per my last email”-mok', blurb_en: 'For meetings that could have been an email. Which is all of them.', blurb_nl: 'Voor vergaderingen die een mail hadden kunnen zijn. Dus allemaal.', image_url: 'assets/merch/mug-email.jpg', max_qty: 5 },
     { sku: 'sticker-logo', name_en: 'Snail-Rocket Sticker', name_nl: 'Slak-raket-sticker', blurb_en: 'Die-cut vinyl. Laptop, water bottle, Dirk’s forehead.', blurb_nl: 'Uitgesneden vinyl. Laptop, waterfles, het voorhoofd van Dirk.', image_url: 'assets/merch/sticker-logo.jpg', max_qty: 10 },
-    { sku: 'sticker-motto', name_en: '“Moving Fast” Sticker', name_nl: '“Moving Fast”-sticker', blurb_en: 'The company motto, in sticker form. Legally binding.', blurb_nl: 'Het bedrijfsmotto, als sticker. Juridisch bindend.', image_url: 'assets/merch/sticker-motto.jpg', max_qty: 10 }
+    { sku: 'sticker-motto', name_en: '“Moving Fast” Sticker', name_nl: '“Moving Fast”-sticker', blurb_en: 'The company motto, in sticker form. Legally binding.', blurb_nl: 'Het bedrijfsmotto, als sticker. Juridisch bindend.', image_url: 'assets/merch/sticker-motto.jpg', max_qty: 10 },
+    { sku: 'slop-mug', slop: true, name_en: 'Mystery Slop Mug', name_nl: 'Mysterie-Slopmok', blurb_en: 'A one-of-a-kind design by our AI Chief Creative Officer. Nobody prompts it. You see it when it arrives. 11 oz.', blurb_nl: 'Een uniek ontwerp van onze AI Chief Creative Officer. Niemand geeft een prompt. Je ziet het pas als het binnenkomt. 330 ml.', image_url: 'assets/merch/slop-mug.jpg', max_qty: 1 },
+    { sku: 'slop-sticker', slop: true, name_en: 'Mystery Slop Sticker', name_nl: 'Mysterie-Slopsticker', blurb_en: 'Unique AI-generated corporate fever dream, 3×3 in. Could be a Renaissance masterpiece. Could be a layoff death match poster.', blurb_nl: 'Unieke AI-gegenereerde bedrijfskoortsdroom, 7,5×7,5 cm. Kan een renaissance-meesterwerk zijn. Kan een ontslag-deathmatchposter zijn.', image_url: 'assets/merch/slop-sticker.jpg', max_qty: 1 }
   ];
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -25,7 +27,10 @@
       '<p>' + esc(L === 'nl' ? p.blurb_nl : p.blurb_en) + '</p>' +
       (p.price_eur ? '<div class="row"><span class="price">' + eur(p.price_eur) + '</span><span class="fine">' + Snel.t({ en: 'incl. shipping · at cost', nl: 'incl. verzending · kostprijs' }) + '</span></div>' : '') +
       (live
-        ? '<label class="fine" style="margin-top:12px">' + Snel.t({ en: 'Quantity', nl: 'Aantal' }) + ' <select class="shop-qty" style="width:auto;padding:4px 10px">' + opts + '</select></label><div class="pp-btn"></div>'
+        ? ((p.max_qty || 5) > 1
+          ? '<label class="fine" style="margin-top:12px">' + Snel.t({ en: 'Quantity', nl: 'Aantal' }) + ' <select class="shop-qty" style="width:auto;padding:4px 10px">' + opts + '</select></label>'
+          : '<select class="shop-qty" hidden><option>1</option></select><p class="fine" style="margin-top:12px">' + Snel.t({ en: 'One of one. Every order gets its own design.', nl: 'Eén van één. Elke bestelling krijgt een eigen ontwerp.' }) + '</p>') +
+          '<div class="pp-btn"></div>'
         : '<p class="badge" style="margin-top:12px">' + Snel.t({ en: 'Store opening soon', nl: 'Winkel opent binnenkort' }) + '</p>') +
       '</article>';
   }
@@ -42,7 +47,9 @@
   function done(res) {
     var box = document.getElementById('shop-done');
     var ok = res && res.status === 'ok';
-    box.innerHTML = ok
+    box.innerHTML = res && res.status === 'slop'
+      ? Snel.t({ en: '🎨 <b>Order #' + res.order + ' placed.</b> Our AI Chief Creative Officer is now designing something nobody asked for. It ships to the address in your PayPal account, and you will not see it before it arrives. Up to 4 weeks. Brace yourself.', nl: '🎨 <b>Bestelling #' + res.order + ' geplaatst.</b> Onze AI Chief Creative Officer ontwerpt nu iets waar niemand om heeft gevraagd. Het wordt verstuurd naar het adres in je PayPal-account, en je ziet het pas als het binnenkomt. Tot 4 weken. Zet je schrap.' })
+      : ok
       ? Snel.t({ en: '🎉 <b>Order #' + res.order + ' placed.</b> It will be made just for you and shipped to the address in your PayPal account. Production + delivery can take up to 4 weeks. Patience is a core value.', nl: '🎉 <b>Bestelling #' + res.order + ' geplaatst.</b> Hij wordt speciaal voor jou gemaakt en verstuurd naar het adres in je PayPal-account. Productie + levering kan tot 4 weken duren. Geduld is een kernwaarde.' })
       : Snel.t({ en: '✅ <b>Payment received</b> (order #' + (res && res.order) + '). The factory needs a human to look at it, so this one may take a little longer. No action needed from you.', nl: '✅ <b>Betaling ontvangen</b> (bestelling #' + (res && res.order) + '). De fabriek heeft even een mens nodig, dus deze kan iets langer duren. Je hoeft niets te doen.' });
     box.hidden = false;
@@ -73,17 +80,20 @@
   }
 
   function boot() {
-    var grid = document.getElementById('shop-grid');
+    var grid = document.getElementById('shop-grid'), slopGrid = document.getElementById('slop-grid');
     if (!grid) return;
     var products = PREVIEW;
     function render() {
-      grid.innerHTML = products.map(card).join('');
+      grid.innerHTML = products.filter(function (p) { return !p.slop || !slopGrid; }).map(card).join('');
+      var slop = products.filter(function (p) { return p.slop; });
+      // Until slop.sql has been run, show the Slop Machine as "opening soon" instead of an empty section.
+      if (slopGrid) slopGrid.innerHTML = (slop.length ? slop : PREVIEW.filter(function (p) { return p.slop; })).map(card).join('');
       if (configured && products.some(function (p) { return p.orderable; })) loadPayPal(function () { mountButtons(products); });
     }
     render();
-    Snel.cloud('/rest/v1/shop_products?select=sku,name_en,name_nl,blurb_en,blurb_nl,price_eur,image_url,max_qty,printful_sync_variant_id,printful_variant_id,print_file_url&order=sort').then(function (rows) {
+    Snel.cloud('/rest/v1/shop_products?select=sku,name_en,name_nl,blurb_en,blurb_nl,price_eur,image_url,max_qty,slop,printful_sync_variant_id,printful_variant_id,print_file_url&order=sort').then(function (rows) {
       if (!rows || !rows.length) return;
-      products = rows.map(function (r) { r.orderable = !!(r.printful_sync_variant_id || (r.printful_variant_id && r.print_file_url)); return r; });
+      products = rows.map(function (r) { r.orderable = !!(r.printful_sync_variant_id || (r.printful_variant_id && (r.print_file_url || r.slop))); return r; });
       render();
     }, function () { /* table not set up yet: keep the preview */ });
     document.addEventListener('snel:lang', render);

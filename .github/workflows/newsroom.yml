@@ -36,3 +36,15 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           FORCE: ${{ inputs.force }}
+      # Slop Machine™: designs paid mystery-merch orders (scripts/slopfactory.mjs). Runs even if the article step failed.
+      - name: Slop Machine
+        if: always()
+        run: |
+          if PEEK=1 node scripts/slopfactory.mjs; then
+            npm install --no-save --no-package-lock --no-audit --no-fund sharp@0.34.4
+            node scripts/slopfactory.mjs
+          fi
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          SLOP_IMAGE_MODEL: ${{ vars.SLOP_IMAGE_MODEL }}

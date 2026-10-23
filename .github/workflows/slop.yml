@@ -1,0 +1,38 @@
+name: Slop Machine
+
+# Designs paid Slop Machine orders (scripts/slopfactory.mjs).
+# Started by the shop function the moment an order is paid (needs the GITHUB_DISPATCH_TOKEN Supabase secret);
+# the hourly Newsroom run also checks, in case that start got lost.
+# Run it by hand with "sample" set to see a design without an order (costs one image, a few cents).
+on:
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: 'Make a sample design instead of processing orders'
+        type: choice
+        options: [none, sticker, mug]
+        default: none
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slop
+  cancel-in-progress: false
+
+jobs:
+  design:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock --no-audit --no-fund sharp@0.34.4
+      - run: node scripts/slopfactory.mjs
+        env:
+          SAMPLE: ${{ inputs.sample != 'none' && inputs.sample || '' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          SLOP_IMAGE_MODEL: ${{ vars.SLOP_IMAGE_MODEL }}

@@ -89,3 +89,28 @@ Send Claude your **sandbox Client ID**. It's public by design, and it's safe to 
 - **Order status `needs_attention`** in `shop_orders`: the buyer *has paid*, but Printful didn't accept the order (bad address, wrong variant ID…). The `note` column says why. Fix it, then place it manually in Printful.
 - **Refunds:** do them in your PayPal account. Cancel the order in Printful if it isn't produced yet.
 - **The `shop_orders` table contains your friends' addresses.** It's private, but don't share screenshots of it.
+
+---
+
+## Slop Machine™ (AI-designed mystery merch)
+
+The "Mystery Slop" mug and sticker get a unique AI design for every order. Nothing is generated in advance:
+
+1. The buyer pays. The shop function marks the order `slop_queued` and immediately starts the **Slop Machine** GitHub workflow.
+2. The workflow (`scripts/slopfactory.mjs`) rolls a random over-the-top concept (art parody, historic moment, deal tombstone, fake award, layoff death match poster…), has an OpenRouter image model draw it with the snail-rocket logo as reference, stamps the real Snellheid Industries™ banner on it, and uploads the print file to the Supabase storage bucket `slop`.
+3. The order goes to Printful **as a draft, always**, even with auto-confirm on. Look at the design in Printful (or open `print_file_url` in `shop_orders`). If it's fine, confirm it. If it's unprintable, set the order's `status` back to `slop_queued` in the Table Editor, delete the Printful draft, and run the workflow again (Actions → Slop Machine → Run workflow) for a new design.
+
+The prompt tells the model: no real brands, people or copyrighted characters, strictly family friendly. Models still get it wrong sometimes, which is why you check every design before it's printed.
+
+**Setup (one time):**
+
+1. Supabase → SQL Editor: run [`supabase/slop.sql`](../supabase/slop.sql). It adds the two products, the storage bucket and three columns.
+2. Redeploy the `shop` function with the new [`index.ts`](../supabase/functions/shop/index.ts).
+3. **OpenRouter credit.** Image models aren't free: roughly $0.04 per design. Add a few dollars at openrouter.ai → Credits, and set a limit on the key if you like. The key is the one the Newsroom already uses.
+4. **Instant start** (optional; without it, orders are picked up by the hourly Newsroom run). Create a token at github.com → Settings → Developer settings → **Fine-grained tokens**:
+   - Repository access: **only `Snellheid.github.io`**
+   - Permissions: **Actions: Read and write** (nothing else)
+   - Add it in Supabase → Edge Functions → Secrets as `GITHUB_DISPATCH_TOKEN`.
+5. **Test without ordering:** GitHub → Actions → **Slop Machine** → Run workflow → `sample: sticker`. The design shows up in the run's summary.
+
+`slop_attempts` counts failed generations (e.g. OpenRouter out of credit). After 5 the order becomes `needs_attention`, and `note` says why. To use a different image model, set the repository variable `SLOP_IMAGE_MODEL` to an OpenRouter model id.
