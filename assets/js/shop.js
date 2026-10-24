@@ -21,9 +21,9 @@
   function unlock(pw) { return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'unlock', password: pw } }); }
   var denied = function (e) { return e && e.message === 'cloud 401'; };
   function lock(on) {
+    // Outsiders see only the login: every other part of the page is marked data-private.
     document.getElementById('shop-gate').hidden = !on;
-    document.getElementById('shop-grid').hidden = on;
-    var slop = document.getElementById('slop-section'); if (slop) slop.hidden = on;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-private]'), function (el) { el.hidden = on; });
     if (on) setTimeout(function () { document.getElementById('shop-pass').focus(); }, 50);
   }
 
