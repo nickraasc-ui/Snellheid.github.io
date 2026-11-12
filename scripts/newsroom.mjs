@@ -151,7 +151,11 @@ async function write(h, authorKey, lastModel) {
       const a = parseArticle(content);
       log('written by', m.id);
       return { ...a, model: m.id };
-    } catch (e) { log('model failed', m.id, e.message); }
+    } catch (e) {
+      log('model failed', m.id, e.message);
+      // A bad or expired key fails every model the same way; that needs a human, so fail the run loudly.
+      if (/^40[13] /.test(e.message)) throw new Error(`OpenRouter rejected the API key (${e.message.slice(0, 80)}). Create a new key and update the OPENROUTER_API_KEY secret.`);
+    }
   }
   const e = new Error('No free model available right now'); e.soft = true; throw e;
 }
