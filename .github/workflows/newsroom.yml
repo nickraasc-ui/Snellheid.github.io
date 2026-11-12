@@ -13,6 +13,18 @@ on:
         description: 'Write an article even if the last one is recent'
         type: boolean
         default: true
+      headline:
+        description: 'Optional: write about this headline instead of a random one'
+        type: string
+        default: ''
+      headline_url:
+        description: 'Optional: link to the story'
+        type: string
+        default: ''
+      headline_source:
+        description: 'Optional: source name, e.g. Axios'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -36,6 +48,9 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           FORCE: ${{ inputs.force }}
+          HEADLINE: ${{ inputs.headline }}
+          HEADLINE_URL: ${{ inputs.headline_url }}
+          HEADLINE_SOURCE: ${{ inputs.headline_source }}
       # Slop Machine™: designs paid mystery-merch orders (scripts/slopfactory.mjs). Runs even if the article step failed.
       - name: Slop Machine
         if: always()

@@ -180,9 +180,15 @@ async function main() {
     return;
   }
   const used = hist.used;
-  const pool = (await headlines()).filter(allowed).filter((h) => !used.has(h.url));
-  if (!pool.length) { log('no usable headlines, skipping this run'); return; }
-  const h = pool[Math.floor(Math.random() * Math.min(pool.length, 12))];
+  let h;
+  if (manual && process.env.HEADLINE) {
+    // Hand-picked story from the "Run workflow" form; the prompt's no-real-names rules still apply.
+    h = { title: process.env.HEADLINE.trim().slice(0, 200), url: (process.env.HEADLINE_URL || '').trim() || `manual:${Date.now()}`, source: (process.env.HEADLINE_SOURCE || '').trim() || 'News', lang: 'en' };
+  } else {
+    const pool = (await headlines()).filter(allowed).filter((x) => !used.has(x.url));
+    if (!pool.length) { log('no usable headlines, skipping this run'); return; }
+    h = pool[Math.floor(Math.random() * Math.min(pool.length, 12))];
+  }
   const keys = Object.keys(AUTHORS);
   const author = Math.random() < 0.4 ? 'derek' : keys[Math.floor(Math.random() * keys.length)];
   log('headline:', h.source, '|', h.title, '| author:', author);
