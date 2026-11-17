@@ -10,7 +10,7 @@ on:
       sample:
         description: 'Make a sample design instead of processing orders'
         type: choice
-        options: [none, sticker, mug]
+        options: [none, sticker, mug, poster]
         default: none
 
 permissions:

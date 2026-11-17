@@ -11,7 +11,10 @@
     { sku: 'sticker-logo', name_en: 'Snail-Rocket Sticker', name_nl: 'Slak-raket-sticker', blurb_en: 'Die-cut vinyl. Laptop, water bottle, Dirk’s forehead.', blurb_nl: 'Uitgesneden vinyl. Laptop, waterfles, het voorhoofd van Dirk.', image_url: 'assets/merch/sticker-logo.jpg', max_qty: 10 },
     { sku: 'sticker-motto', name_en: '“Moving Fast” Sticker', name_nl: '“Moving Fast”-sticker', blurb_en: 'The company motto, in sticker form. Legally binding.', blurb_nl: 'Het bedrijfsmotto, als sticker. Juridisch bindend.', image_url: 'assets/merch/sticker-motto.jpg', max_qty: 10 },
     { sku: 'slop-mug', slop: true, name_en: 'Mystery Slop Mug', name_nl: 'Mysterie-Slopmok', blurb_en: 'A one-of-a-kind design by our AI Chief Creative Officer. Nobody prompts it. You see it when it arrives. 11 oz.', blurb_nl: 'Een uniek ontwerp van onze AI Chief Creative Officer. Niemand geeft een prompt. Je ziet het pas als het binnenkomt. 330 ml.', image_url: 'assets/merch/slop-mug.jpg', max_qty: 1 },
-    { sku: 'slop-sticker', slop: true, name_en: 'Mystery Slop Sticker', name_nl: 'Mysterie-Slopsticker', blurb_en: 'Unique AI-generated corporate fever dream, 3×3 in. Could be a Renaissance masterpiece. Could be a layoff death match poster.', blurb_nl: 'Unieke AI-gegenereerde bedrijfskoortsdroom, 7,5×7,5 cm. Kan een renaissance-meesterwerk zijn. Kan een ontslag-deathmatchposter zijn.', image_url: 'assets/merch/slop-sticker.jpg', max_qty: 1 }
+    { sku: 'slop-sticker', slop: true, name_en: 'Mystery Slop Sticker', name_nl: 'Mysterie-Slopsticker', blurb_en: 'Unique AI-generated corporate fever dream, 3×3 in. Could be a Renaissance masterpiece. Could be a layoff death match poster.', blurb_nl: 'Unieke AI-gegenereerde bedrijfskoortsdroom, 7,5×7,5 cm. Kan een renaissance-meesterwerk zijn. Kan een ontslag-deathmatchposter zijn.', image_url: 'assets/merch/slop-sticker.jpg', max_qty: 1 },
+    { sku: 'roulette-15', slop: true, roulette: true, name_en: 'Budget Slop Roulette · €15', name_nl: 'Budget Slop Roulette · €15', blurb_en: 'Name your budget, receive… something. Small format. Possibly paper.', blurb_nl: 'Kies je budget, ontvang… iets. Klein formaat. Mogelijk papier.', image_url: 'assets/merch/roulette-15.jpg', max_qty: 1 },
+    { sku: 'roulette-30', slop: true, roulette: true, name_en: 'Budget Slop Roulette · €30', name_nl: 'Budget Slop Roulette · €30', blurb_en: 'Mid-tier surprise. Could hold coffee. Could hold your head.', blurb_nl: 'Middenklasse-verrassing. Kan koffie bevatten. Kan je hoofd ondersteunen.', image_url: 'assets/merch/roulette-30.jpg', max_qty: 1 },
+    { sku: 'roulette-60', slop: true, roulette: true, name_en: 'Budget Slop Roulette · €60', name_nl: 'Budget Slop Roulette · €60', blurb_en: 'Executive tier. Large, framed or cuddly. Definitely unnecessary.', blurb_nl: 'Directieniveau. Groot, ingelijst of knuffelbaar. Absoluut overbodig.', image_url: 'assets/merch/roulette-60.jpg', max_qty: 1 }
   ];
 
   // Store password: the shop function checks it; the browser only remembers what the visitor typed.
@@ -96,14 +99,19 @@
   }
 
   function boot() {
-    var grid = document.getElementById('shop-grid'), slopGrid = document.getElementById('slop-grid');
+    var grid = document.getElementById('shop-grid'), slopGrid = document.getElementById('slop-grid'), roulGrid = document.getElementById('roulette-grid');
     if (!grid) return;
     var products = PREVIEW;
     function render() {
       grid.innerHTML = products.filter(function (p) { return !p.slop || !slopGrid; }).map(card).join('');
-      var slop = products.filter(function (p) { return p.slop; });
-      // Until slop.sql has been run, show the Slop Machine as "opening soon" instead of an empty section.
-      if (slopGrid) slopGrid.innerHTML = (slop.length ? slop : PREVIEW.filter(function (p) { return p.slop; })).map(card).join('');
+      // Until slop.sql / roulette.sql have been run, show those sections as "opening soon" instead of empty.
+      function section(el, test) {
+        if (!el) return;
+        var list = products.filter(test);
+        el.innerHTML = (list.length ? list : PREVIEW.filter(test)).map(card).join('');
+      }
+      section(slopGrid, function (p) { return p.slop && !p.roulette; });
+      section(roulGrid, function (p) { return p.roulette; });
       if (configured && products.some(function (p) { return p.orderable; })) loadPayPal(function () { mountButtons(products); });
     }
     render();
@@ -121,9 +129,9 @@
         Snel.toast(Snel.t({ en: '❌ Access denied. HR has been notified.', nl: '❌ Toegang geweigerd. HR is op de hoogte gebracht.' }));
       });
     });
-    Snel.cloud('/rest/v1/shop_products?select=sku,name_en,name_nl,blurb_en,blurb_nl,price_eur,image_url,max_qty,slop,printful_sync_variant_id,printful_variant_id,print_file_url&order=sort').then(function (rows) {
+    Snel.cloud('/rest/v1/shop_products?select=sku,name_en,name_nl,blurb_en,blurb_nl,price_eur,image_url,max_qty,slop,roulette,printful_sync_variant_id,printful_variant_id,print_file_url&order=sort').then(function (rows) {
       if (!rows || !rows.length) return;
-      products = rows.map(function (r) { r.orderable = !!(r.printful_sync_variant_id || (r.printful_variant_id && (r.print_file_url || r.slop))); return r; });
+      products = rows.map(function (r) { r.orderable = !!(r.roulette || r.printful_sync_variant_id || (r.printful_variant_id && (r.print_file_url || r.slop))); return r; });
       render();
     }, function () { /* table not set up yet: keep the preview */ });
     document.addEventListener('snel:lang', render);

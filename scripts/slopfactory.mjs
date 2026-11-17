@@ -33,6 +33,14 @@ const KINDS = {
     canvas: 'a square 3×3 inch sticker; bold, readable from across an open-plan office' },
 };
 
+// Budget Slop Roulette items come with their own size and description; the AI gets the closest aspect ratio it supports.
+const ASPECTS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
+const nearestAspect = (w, h) => ASPECTS.reduce((best, a) => {
+  const [x, y] = a.split(':').map(Number), [bx, by] = best.split(':').map(Number);
+  return Math.abs(Math.log(x / y / (w / h))) < Math.abs(Math.log(bx / by / (w / h))) ? a : best;
+});
+const specOf = (kind) => (typeof kind === 'string' ? KINDS[kind] : kind);
+
 const log = (...a) => console.log('[slop]', ...a);
 const req = (name) => { const v = (process.env[name] || '').trim(); if (!v) throw new Error(`Missing env ${name}`); return v; };
 // Pasted secrets sometimes carry line breaks or a second value; keep only the real key.
@@ -74,7 +82,7 @@ const THEMES = [
 ];
 
 export function concept(kind) {
-  const k = KINDS[kind];
+  const k = specOf(kind);
   const idea = { format: pick(FORMATS), style: pick(STYLES), theme: pick(THEMES) };
   const prompt = [
     `Create original artwork for ${k.canvas}.`,
@@ -128,7 +136,7 @@ async function draw(kind, idea) {
         body: JSON.stringify({
           model,
           modalities: ['image', 'text'],
-          image_config: { aspect_ratio: KINDS[kind].aspect },
+          image_config: { aspect_ratio: specOf(kind).aspect },
           messages: [{ role: 'user', content: [
             { type: 'text', text: idea.prompt },
             { type: 'image_url', image_url: { url: `data:image/png;base64,${logo}` } },
@@ -151,10 +159,14 @@ async function draw(kind, idea) {
 
 async function printFile(kind, art) {
   const { default: sharp } = await import('sharp');
-  const k = KINDS[kind];
-  return sharp(art).resize(k.w, k.h, { fit: 'cover' })
-    .composite([{ input: new URL(k.band, ROOT).pathname }])
-    .png().toBuffer();
+  const k = specOf(kind);
+  let band = { input: new URL(k.band || 'assets/merch/slop/lockup.png', ROOT).pathname };
+  if (!k.band) {
+    // Any other size: the brand lockup, 60% of the width, bottom centre.
+    const lw = Math.round(k.w * 0.6), lh = Math.round(lw * 300 / 1723);
+    band = { input: await sharp(band.input).resize(lw, lh).toBuffer(), left: Math.round((k.w - lw) / 2), top: k.h - lh - Math.round(k.h * 0.03) };
+  }
+  return sharp(art).resize(k.w, k.h, { fit: 'cover' }).composite([band]).png().toBuffer();
 }
 
 async function upload(name, data, type = 'image/png') {
@@ -171,7 +183,12 @@ async function place(id) {
   log(`order ${id} → Printful: ${d.status}`);
 }
 
-const kindOf = (sku) => (sku.includes('mug') ? 'mug' : 'sticker');
+function kindOf(o) {
+  const r = o.roulette_item;
+  if (!r) return o.sku.includes('mug') ? 'mug' : 'sticker';
+  if (r.canvas === 'mug') return 'mug';
+  return { w: r.w, h: r.h, aspect: nearestAspect(r.w, r.h), canvas: r.canvas };
+}
 
 async function design(kind) {
   const idea = concept(kind);
@@ -187,7 +204,7 @@ async function work(o) {
   }) ?? [];
   if (!mine) return;
   try {
-    const { idea, model, png } = await design(kindOf(o.sku));
+    const { idea, model, png } = await design(kindOf(o));
     const url = await upload(`order-${o.id}-${randomBytes(8).toString('hex')}.png`, png);
     await sbJson(`/rest/v1/shop_orders?id=eq.${o.id}`, { method: 'PATCH', body: JSON.stringify({
       status: 'slop_ready', print_file_url: url, slop_prompt: `[${model}] ${idea.prompt}`,
@@ -204,20 +221,21 @@ async function work(o) {
 
 async function main() {
   if (process.env.SAMPLE) {
-    const kind = KINDS[process.env.SAMPLE] ? process.env.SAMPLE : 'sticker';
+    const label = ['mug', 'sticker', 'poster'].includes(process.env.SAMPLE) ? process.env.SAMPLE : 'sticker';
+    const kind = label === 'poster' ? { w: 1772, h: 2362, aspect: '3:4', canvas: 'a portrait 30×40 cm wall poster' } : label;
     const { idea, png } = await design(kind);
-    if (process.env.DRY_RUN) { await writeFile(`slop-sample-${kind}.png`, png); log(`saved slop-sample-${kind}.png`); return; }
+    if (process.env.DRY_RUN) { await writeFile(`slop-sample-${label}.png`, png); log(`saved slop-sample-${label}.png`); return; }
     const name = `samples/${Date.now()}-${randomBytes(6).toString('hex')}`;
     const url = await upload(`${name}.png`, png);
     // The full mug print file is too big for GitHub's image proxy, so the summary shows a small JPEG and links the original.
     const { default: sharp } = await import('sharp');
     const preview = await upload(`${name}-preview.jpg`, await sharp(png).resize({ width: 1200 }).jpeg({ quality: 82 }).toBuffer(), 'image/jpeg');
     log('sample:', url);
-    if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Slop sample (${kind})\n\n[![sample](${preview})](${url})\n\n[Full print file](${url})\n\n<details><summary>Prompt</summary>\n\n${idea.prompt}\n\n</details>\n`);
+    if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Slop sample (${label})\n\n[![sample](${preview})](${url})\n\n[Full print file](${url})\n\n<details><summary>Prompt</summary>\n\n${idea.prompt}\n\n</details>\n`);
     return;
   }
   if (!process.env.SUPABASE_SECRET_KEY) { log('not configured (SUPABASE_SECRET_KEY missing). Skipping.'); process.exit(process.env.PEEK ? 1 : 0); }
-  const todo = await sbJson('/rest/v1/shop_orders?status=in.(slop_queued,slop_ready)&select=id,sku,status,slop_attempts&order=id&limit=5');
+  const todo = await sbJson('/rest/v1/shop_orders?status=in.(slop_queued,slop_ready)&select=id,sku,status,slop_attempts,roulette_item&order=id&limit=5');
   if (process.env.PEEK) { log(`${todo.length} slop order(s) waiting`); process.exit(todo.length ? 0 : 1); }
   if (!todo.length) return log('nothing to make');
   if (!process.env.OPENROUTER_SLOP_KEY && !process.env.OPENROUTER_API_KEY) throw new Error('Missing env OPENROUTER_SLOP_KEY');

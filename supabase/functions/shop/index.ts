@@ -4,7 +4,8 @@
 //   { action: "unlock",  password }      → checks the store password (200 ok / 401), so the page can show the shop
 //   { action: "create",  sku, qty, password } → creates a PayPal order (price comes from shop_products, never the browser)
 //   { action: "capture", orderID }       → captures the payment, verifies it, then places the Printful order
-//                                          (Slop Machine products are queued instead: their design doesn't exist yet)
+//                                          (Slop Machine products are queued instead: their design doesn't exist yet;
+//                                          Budget Slop Roulette first picks a random product that fits the budget)
 //   { action: "place", id }              → Slop Machine only: places the Printful draft once scripts/slopfactory.mjs
 //                                          has generated the design. Header x-shop-key must be a Supabase secret key.
 //
@@ -93,7 +94,7 @@ async function create(sku: unknown, qty: unknown, password: unknown) {
   const n = Number(qty);
   const [p] = await db(`shop_products?sku=eq.${sku}&active=is.true&select=*`) ?? [];
   if (!p) throw new Fail(404, "unknown product");
-  if (!p.printful_sync_variant_id && !(p.printful_variant_id && (p.print_file_url || p.slop))) throw new Fail(409, "product not orderable yet");
+  if (!p.roulette && !p.printful_sync_variant_id && !(p.printful_variant_id && (p.print_file_url || p.slop))) throw new Fail(409, "product not orderable yet");
   if (!Number.isInteger(n) || n < 1 || n > p.max_qty) throw new Fail(400, "bad quantity");
 
   // Bot brake: unpaid checkouts are free to create, so cap them shop-wide.
@@ -156,7 +157,12 @@ async function capture(orderID: unknown) {
 
   // Paid. Now ask Printful to make and ship it. If that fails the money is safe and the order is flagged for a human.
   try {
-    const [p] = await db(`shop_products?sku=eq.${o.sku}&select=slop,printful_sync_variant_id,printful_variant_id,print_file_url`);
+    const [p] = await db(`shop_products?sku=eq.${o.sku}&select=slop,roulette,price_eur,printful_sync_variant_id,printful_variant_id,print_file_url`);
+    if (p.roulette) {
+      const item = await spinRoulette(Number(p.price_eur), recipient);
+      if (!item) throw new Error("roulette: nothing fits the budget for this address");
+      await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ roulette_item: item }) });
+    }
     if (p.slop) {
       // Slop Machine: the workflow (scripts/slopfactory.mjs) designs it, then calls "place".
       await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "slop_queued" }) });
@@ -191,6 +197,38 @@ async function startSlopMachine() {
   } catch (e) { console.error("slop dispatch", e); }
 }
 
+// Budget Slop Roulette: pick a random product whose real Printful cost (incl. shipping and VAT to this address)
+// plus PayPal's fee fits the budget. Bigger items are likelier; if nothing in the tier fits, fall back to cheaper tiers.
+async function spinRoulette(budget: number, recipient: unknown) {
+  const items: Record<string, unknown>[] = await db(`roulette_items?active=is.true&tier=lte.${Math.round(budget)}&select=*&order=tier.desc`) ?? [];
+  const fee = budget * 0.035 + 0.39 + 0.15; // PayPal + the AI image
+  for (const tier of [...new Set(items.map((i) => i.tier as number))].sort((a, b) => b - a)) {
+    const pool = items.filter((i) => i.tier === tier).sort(() => Math.random() - 0.5);
+    for (const item of pool.slice(0, 4)) {
+      try {
+        const cost = await estimate(item, recipient);
+        if (cost * 1.03 + fee <= budget) return { ...item, cost_eur: cost };
+        console.log("roulette: too expensive", item.id, cost);
+      } catch (e) { console.error("roulette estimate", item.id, e); }
+    }
+  }
+  return null;
+}
+
+async function estimate(item: Record<string, unknown>, recipient: unknown) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${env("PRINTFUL_TOKEN")}`, "Content-Type": "application/json" };
+  if (env("PRINTFUL_STORE_ID")) headers["X-PF-Store-Id"] = env("PRINTFUL_STORE_ID");
+  const files = (item.placements as string[]).map((type) => ({ type, url: "https://www.snellheid.com/assets/img/og.png" }));
+  const r = await fetch(`${PRINTFUL_API}/orders/estimate-costs`, {
+    method: "POST", headers, body: JSON.stringify({ recipient, items: [{ variant_id: item.variant_id, quantity: 1, files }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  const c = d.result?.costs;
+  if (!r.ok || !c) throw new Error(`estimate ${r.status}: ${JSON.stringify(d).slice(0, 200)}`);
+  if (c.currency !== "EUR") throw new Error(`estimate currency ${c.currency}`);
+  return Number(c.total);
+}
+
 async function printful(o: { id: number }, recipient: unknown, item: unknown, confirm: boolean) {
   const headers: Record<string, string> = { Authorization: `Bearer ${env("PRINTFUL_TOKEN")}`, "Content-Type": "application/json" };
   if (env("PRINTFUL_STORE_ID")) headers["X-PF-Store-Id"] = env("PRINTFUL_STORE_ID");
@@ -219,8 +257,11 @@ async function place(id: unknown, key: string | null) {
   }) ?? [];
   if (!o) return { status: "not_ready" };
   try {
-    const [p] = await db(`shop_products?sku=eq.${o.sku}&select=printful_variant_id`);
-    const pf = await printful(o, o.ship_to, { variant_id: p.printful_variant_id, quantity: o.qty, files: [{ url: o.print_file_url }] }, false);
+    const r = o.roulette_item;
+    const item = r
+      ? { variant_id: r.variant_id, quantity: 1, files: (r.placements as string[]).map((type) => ({ type, url: o.print_file_url })) }
+      : { variant_id: (await db(`shop_products?sku=eq.${o.sku}&select=printful_variant_id`))[0].printful_variant_id, quantity: o.qty, files: [{ url: o.print_file_url }] };
+    const pf = await printful(o, o.ship_to, item, false);
     await db(`shop_orders?id=eq.${o.id}`, { method: "PATCH", body: JSON.stringify({ status: "draft_in_printful", printful_order_id: pf }) });
     return { status: "ok", order: o.id };
   } catch (e) {

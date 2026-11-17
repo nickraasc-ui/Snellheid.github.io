@@ -116,3 +116,11 @@ The prompt tells the model: no real brands, people or copyrighted characters, st
 5. **Test without ordering:** GitHub → Actions → **Slop Machine** → Run workflow → `sample: sticker`. The design shows up in the run's summary.
 
 `slop_attempts` counts failed generations (e.g. OpenRouter out of credit). After 5 the order becomes `needs_attention`, and `note` says why. To use a different image model, set the repository variable `SLOP_IMAGE_MODEL` to an OpenRouter model id.
+
+---
+
+## Budget Slop Roulette™
+
+Three budget products (€15 / €30 / €60). After payment, the shop function picks a random product from `roulette_items` for that tier. It asks Printful for the real cost to the buyer's address, including shipping and VAT, and only takes items where that cost plus the PayPal fee fits the budget. If nothing in the tier fits, it tries cheaper tiers. The Slop Machine then designs the item at the right size, and it lands in Printful as a draft for your review. The difference between budget and cost stays with you.
+
+Setup: run [`supabase/roulette.sql`](../supabase/roulette.sql) and redeploy the `shop` function. To add or remove products, edit `roulette_items` in the Table Editor (`active` switches one off).
