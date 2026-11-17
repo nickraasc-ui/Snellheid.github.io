@@ -198,7 +198,7 @@ async function startSlopMachine() {
 }
 
 // Budget Slop Roulette: pick a random product whose real Printful cost (incl. shipping and VAT to this address)
-// plus PayPal's fee fits the budget. Bigger items are likelier; if nothing in the tier fits, fall back to cheaper tiers.
+// plus PayPal's fee fits the budget. Tries the budget's own tier first; if nothing there fits, cheaper tiers.
 async function spinRoulette(budget: number, recipient: unknown) {
   const items: Record<string, unknown>[] = await db(`roulette_items?active=is.true&tier=lte.${Math.round(budget)}&select=*&order=tier.desc`) ?? [];
   const fee = budget * 0.035 + 0.39 + 0.15; // PayPal + the AI image
