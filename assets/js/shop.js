@@ -23,11 +23,38 @@
   function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch (e) { /* private mode: ask again next time */ } }
   function unlock(pw) { return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'unlock', password: pw } }); }
   var denied = function (e) { return e && e.message === 'cloud 401'; };
+  // Too many wrong guesses: the shop function answers 429 with the time the lock ends.
+  var lockedOut = function (e) { return e && e.status === 429 && e.body && e.body.error === 'locked' && e.body.until; };
   function lock(on) {
     // Outsiders see only the login: every other part of the page is marked data-private.
+    document.getElementById('shop-locked').hidden = true;
     document.getElementById('shop-gate').hidden = !on;
     Array.prototype.forEach.call(document.querySelectorAll('[data-private]'), function (el) { el.hidden = on; });
     if (on) setTimeout(function () { document.getElementById('shop-pass').focus(); }, 50);
+  }
+
+  // Locked out: HR prescribes mandatory Flappy Snail until the lock ends.
+  var lockTimer = null;
+  function lockout(until) {
+    var end = Date.parse(until) || Date.now() + 15 * 60 * 1000;
+    lock(true);
+    document.getElementById('shop-gate').hidden = true;
+    document.getElementById('shop-locked').hidden = false;
+    if (!document.getElementById('flappy-js')) {
+      var s = document.createElement('script');
+      s.id = 'flappy-js'; s.src = 'assets/js/flappy.js?v=202610220516';
+      document.head.appendChild(s);
+    }
+    var left = document.getElementById('lock-left');
+    function tick() {
+      var sec = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      left.textContent = Math.floor(sec / 60) + ':' + ('0' + sec % 60).slice(-2);
+      if (!sec) { clearInterval(lockTimer); lock(true); } // lock over: back to the password form
+    }
+    clearInterval(lockTimer);
+    tick();
+    lockTimer = setInterval(tick, 1000);
+    Snel.toast(Snel.t({ en: '🚨 Too many wrong passwords. HR has scheduled mandatory Flappy Snail training.', nl: '🚨 Te vaak een fout wachtwoord. HR heeft verplichte Flappy Snail-training ingepland.' }), 6000);
   }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -85,6 +112,7 @@
           var qty = +el.querySelector('.shop-qty').value || 1;
           return Snel.cloud('/functions/v1/shop', { method: 'POST', body: { action: 'create', sku: p.sku, qty: qty, password: getPass() } }).then(function (r) { return r.id; }, function (e) {
             if (denied(e)) { setPass(''); lock(true); }
+            if (lockedOut(e)) lockout(e.body.until);
             throw e;
           });
         },
@@ -116,7 +144,12 @@
     }
     render();
     // Only a 401 means "locked"; if the check itself fails, show the shop and let checkout decide.
-    unlock(getPass()).then(function () { lock(false); }, function (e) { lock(denied(e)); });
+    unlock(getPass()).then(function () { lock(false); }, function (e) {
+      if (lockedOut(e)) return lockout(e.body.until);
+      // A saved password that no longer works (it was changed): forget it, so it isn't re-sent as a guess on every visit.
+      if (denied(e) && getPass()) setPass('');
+      lock(denied(e));
+    });
     document.getElementById('shop-gate-form').addEventListener('submit', function (ev) {
       ev.preventDefault();
       var input = document.getElementById('shop-pass'), pw = input.value.trim();
@@ -124,6 +157,7 @@
         setPass(pw); input.value = ''; lock(false);
         Snel.toast(Snel.t({ en: '✅ Badge accepted. Welcome back to the family.', nl: '✅ Badge geaccepteerd. Welkom terug in de familie.' }));
       }, function (e) {
+        if (lockedOut(e)) { input.value = ''; lockout(e.body.until); return; }
         if (!denied(e)) { lock(false); return; }
         input.value = '';
         Snel.toast(Snel.t({ en: '❌ Access denied. HR has been notified.', nl: '❌ Toegang geweigerd. HR is op de hoogte gebracht.' }));

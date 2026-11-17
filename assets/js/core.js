@@ -171,7 +171,12 @@
     if (opts.prefer) headers.Prefer = opts.prefer;
     return fetch(CLOUD.url + path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined })
       .then(function (r) {
-        if (!r.ok) throw new Error('cloud ' + r.status);
+        if (!r.ok) return r.text().then(function (txt) {
+          var err = new Error('cloud ' + r.status);
+          err.status = r.status;
+          try { err.body = JSON.parse(txt); } catch (e) { /* not JSON */ }
+          throw err;
+        });
         return r.text(); // inserts answer 201 with an empty body
       })
       .then(function (txt) { return txt ? JSON.parse(txt) : null; });

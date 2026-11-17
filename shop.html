@@ -18,8 +18,8 @@
   <link rel="preload" href="assets/fonts/squadaone.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/css/snellheid.css?v=202610220516">
   <script>(function(){var l;try{l=JSON.parse(localStorage.getItem('snel-lang'))}catch(e){}l=l||((navigator.language||'').toLowerCase().indexOf('nl')===0?'nl':'en');document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l})()</script>
-  <script src="assets/js/core.js?v=202610220516" defer></script>
-  <script src="assets/js/shop.js?v=202611171200" defer></script>
+  <script src="assets/js/core.js?v=202611171800" defer></script>
+  <script src="assets/js/shop.js?v=202611171800" defer></script>
 </head>
 <body>
 <div id="site-header"></div>
@@ -34,6 +34,26 @@
         <button class="btn hot" type="submit"><span data-l="en">Badge in</span><span data-l="nl">Inchecken</span></button>
       </form>
     </div>
+    </div>
+  </section>
+
+<section id="shop-locked" style="padding-top:48px" hidden>
+    <div class="wrap">
+      <div class="grid grid-2" style="align-items:center">
+        <div>
+          <span class="eyebrow"><span data-l="en">Access suspended</span><span data-l="nl">Toegang opgeschort</span></span>
+          <h2><span data-l="en">Too many wrong passwords.</span><span data-l="nl">Te vaak een fout wachtwoord.</span></h2>
+          <p class="lead"><span data-l="en">HR has logged the incident and scheduled mandatory Flappy Snail training. You may badge in again when it’s over.</span><span data-l="nl">HR heeft het incident vastgelegd en verplichte Flappy Snail-training ingepland. Je mag weer inchecken als die voorbij is.</span></p>
+          <p><span data-l="en">Training ends in</span><span data-l="nl">Training eindigt over</span> <b class="display" id="lock-left" style="font-size:2rem">15:00</b></p>
+          <p><span data-l="en">Your best:</span><span data-l="nl">Jouw record:</span> <b class="display" id="flappy-best" style="font-size:2rem">0</b></p>
+          <p class="fine"><span data-l="en">Tap, click or press Space. Real employees can wait it out; bots will have to learn to fly.</span><span data-l="nl">Tik, klik of druk op spatie. Echte medewerkers wachten het af; bots moeten maar leren vliegen.</span></p>
+        </div>
+        <div>
+          <div class="game-frame">
+            <canvas id="flappy" width="480" height="640" tabindex="0" aria-label="Flappy Snail game. Press Space or tap to flap."></canvas>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 

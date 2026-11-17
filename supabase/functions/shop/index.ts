@@ -14,6 +14,7 @@
 //   PRINTFUL_TOKEN, PRINTFUL_STORE_ID (optional), PRINTFUL_AUTO_CONFIRM ("true" sends orders to production;
 //   anything else leaves them as drafts in Printful for you to confirm by hand)
 //   SHOP_PASSWORD (optional): store password for the boys. When set, nobody can start a checkout without it.
+//   Wrong guesses are rate-limited by supabase/lockout.sql (5 per device per 15 min, 30 per hour in total).
 //   ALLOWED_ORIGINS (optional, comma-separated; default https://www.snellheid.com)
 //   SHOP_DB_KEY: your Supabase secret key (sb_secret_…), so the function can read products and write orders.
 //   GITHUB_DISPATCH_TOKEN (optional): fine-grained GitHub token with Actions read/write on this repo only. Starts the
@@ -43,7 +44,7 @@ function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors(origin), "Content-Type": "application/json" } });
 }
 class Fail extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public extra: Record<string, unknown> = {}) { super(message); }
 }
 
 async function db(path: string, init: RequestInit = {}) {
@@ -75,21 +76,36 @@ async function paypal(path: string, body: unknown, requestId?: string) {
 
 const money = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
-// Store password. Compared as hashes (constant length), and every wrong guess costs a second.
+// Store password. Compared as hashes (constant length), every wrong guess costs a second, and too many wrong
+// guesses lock the check (supabase/lockout.sql). Even the right password is refused while locked, or a bot could
+// keep guessing through the lock.
 async function sha(s: string) {
   return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-async function checkPassword(given: unknown) {
+// The visitor's IP, hashed so no raw IPs are stored. Cloudflare's header can't be faked; X-Forwarded-For can, which
+// is why the lockout also has a limit across all devices.
+function clientIp(req: Request) {
+  return req.headers.get("cf-connecting-ip") || (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+}
+async function checkPassword(given: unknown, ip: string) {
   const want = env("SHOP_PASSWORD");
   if (!want) return; // no password set: open store
-  if (typeof given === "string" && given.length <= 200 && await sha(given.trim().toLowerCase()) === await sha(want.toLowerCase())) return;
+  // No password typed (e.g. the page's automatic check on a first visit) isn't a guess, so it doesn't count.
+  if (typeof given !== "string" || !given.trim() || given.length > 200) throw new Fail(401, "wrong password");
+  const who = (await sha(`snel-shop|${ip}`)).slice(0, 32);
+  const until = await db("rpc/shop_auth_attempt", { method: "POST", body: JSON.stringify({ p_ip: who }) });
+  if (until) throw new Fail(429, "locked", { until });
+  if (await sha(given.trim().toLowerCase()) === await sha(want.toLowerCase())) {
+    await db(`shop_auth_fails?ip_hash=eq.${who}`, { method: "DELETE" });
+    return;
+  }
   await new Promise((r) => setTimeout(r, 1000));
   throw new Fail(401, "wrong password");
 }
 
 // ---------- actions ----------
-async function create(sku: unknown, qty: unknown, password: unknown) {
-  await checkPassword(password);
+async function create(sku: unknown, qty: unknown, password: unknown, ip: string) {
+  await checkPassword(password, ip);
   if (typeof sku !== "string" || !/^[a-z0-9-]{1,40}$/.test(sku)) throw new Fail(400, "bad sku");
   const n = Number(qty);
   const [p] = await db(`shop_products?sku=eq.${sku}&active=is.true&select=*`) ?? [];
@@ -277,13 +293,13 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405, origin);
   try {
     const body = await req.json().catch(() => ({}));
-    if (body.action === "unlock") { await checkPassword(body.password); return json({ ok: true }, 200, origin); }
-    if (body.action === "create") return json(await create(body.sku, body.qty, body.password), 200, origin);
+    if (body.action === "unlock") { await checkPassword(body.password, clientIp(req)); return json({ ok: true }, 200, origin); }
+    if (body.action === "create") return json(await create(body.sku, body.qty, body.password, clientIp(req)), 200, origin);
     if (body.action === "capture") return json(await capture(body.orderID), 200, origin);
     if (body.action === "place") return json(await place(body.id, req.headers.get("x-shop-key")), 200, origin);
     throw new Fail(400, "unknown action");
   } catch (e) {
-    if (e instanceof Fail) return json({ error: e.message }, e.status, origin);
+    if (e instanceof Fail) return json({ error: e.message, ...e.extra }, e.status, origin);
     console.error(e);
     return json({ error: "server error" }, 500, origin);
   }
