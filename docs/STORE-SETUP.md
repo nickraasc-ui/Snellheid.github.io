@@ -99,7 +99,7 @@ Send Claude your **sandbox Client ID**. It's public by design, and it's safe to 
 The "Mystery Slop" mug and sticker get a unique AI design for every order. Nothing is generated in advance:
 
 1. The buyer pays. The shop function marks the order `slop_queued` and immediately starts the **Slop Machine** GitHub workflow.
-2. The workflow (`scripts/slopfactory.mjs`) rolls a random over-the-top concept (art parody, historic moment, deal tombstone, fake award, layoff death match poster…), has an OpenRouter image model draw it with the snail-rocket logo as reference, stamps the real Snellheid Industries™ banner on it, and uploads the print file to the Supabase storage bucket `slop`.
+2. The workflow (`scripts/slopfactory.mjs`) rolls a random over-the-top concept (art parody, historic moment, deal tombstone, fake award, layoff death match poster…), has an OpenRouter image model draw it with the snail-rocket logo as reference, scales it to the exact print size, and uploads the print file to the Supabase storage bucket `slop`.
 3. The order goes to Printful **as a draft, always**, even with auto-confirm on. Look at the design in Printful (or open `print_file_url` in `shop_orders`). If it's fine, confirm it. If it's unprintable, set the order's `status` back to `slop_queued` in the Table Editor, delete the Printful draft, and run the workflow again (Actions → Slop Machine → Run workflow) for a new design.
 
 The prompt tells the model: no real brands, people or copyrighted characters, strictly family friendly. Models still get it wrong sometimes, which is why you check every design before it's printed.

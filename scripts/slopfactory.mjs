@@ -3,7 +3,7 @@
 //
 // For each order the shop function left in status "slop_queued":
 //   1. roll a random over-the-top corporate concept and let an OpenRouter image model draw it, with our logo as reference;
-//   2. stamp the real Snellheid Industries™ logo banner on top (the model can't be trusted to spell its own employer);
+//   2. scale it to the product's exact print size (no banner or overlay: the mascot carries the brand);
 //   3. upload the print file to the public "slop" storage bucket;
 //   4. ask the shop function to place it at Printful, always as a draft, so a human looks at it before it's printed.
 // Failures go back to the queue and are retried next hour; after MAX_ATTEMPTS the order becomes "needs_attention".
@@ -29,9 +29,9 @@ const MAX_ATTEMPTS = 5;
 const ROOT = new URL('..', import.meta.url);
 
 const KINDS = {
-  mug: { w: 2700, h: 1050, aspect: '21:9', band: 'assets/merch/slop/band-mug.png',
+  mug: { w: 2700, h: 1050, aspect: '21:9',
     canvas: 'a very wide panoramic wrap-around print for an 11 oz coffee mug (about 2.6 times wider than tall); compose it as one continuous scene that also works when only the left or right half is visible' },
-  sticker: { w: 900, h: 900, aspect: '1:1', band: 'assets/merch/slop/band-sticker.png',
+  sticker: { w: 900, h: 900, aspect: '1:1',
     canvas: 'a square 3×3 inch sticker; bold, readable from across an open-plan office' },
 };
 
@@ -94,7 +94,7 @@ export function concept(kind) {
     'Go completely, ridiculously over the top: maximalist, epic, dramatic, overflowing with details, deranged corporate pride. Subtle is a fireable offence.',
     'Rules: everything must be original. No real company names, brands or logos other than Snellheid; no copyrighted characters; no real people, celebrities or politicians.',
     'Strictly family friendly: no nudity, nothing sexual, no blood or gore, no weapons aimed at anyone, no drugs, no hate symbols, no real tragedies. Any fighting is harmless cartoon slapstick.',
-    'Flat print artwork only, filling the whole canvas edge to edge: no border, no mug or sticker mockup, no product photo. Keep the bottom 15% simple background, a brand banner will be placed there.',
+    'Flat print artwork only, filling the whole canvas edge to edge: no border, no mug or sticker mockup, no product photo.',
   ].join('\n');
   return { ...idea, prompt };
 }
@@ -162,13 +162,7 @@ async function draw(kind, idea) {
 async function printFile(kind, art) {
   const { default: sharp } = await import('sharp');
   const k = specOf(kind);
-  let band = { input: new URL(k.band || 'assets/merch/slop/lockup.png', ROOT).pathname };
-  if (!k.band) {
-    // Any other size: the brand lockup, 60% of the width, bottom centre.
-    const lw = Math.round(k.w * 0.6), lh = Math.round(lw * 300 / 1723);
-    band = { input: await sharp(band.input).resize(lw, lh).toBuffer(), left: Math.round((k.w - lw) / 2), top: k.h - lh - Math.round(k.h * 0.03) };
-  }
-  return sharp(art).resize(k.w, k.h, { fit: 'cover' }).composite([band]).png().toBuffer();
+  return sharp(art).resize(k.w, k.h, { fit: 'cover' }).png().toBuffer();
 }
 
 async function upload(name, data, type = 'image/png') {
