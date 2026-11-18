@@ -10,7 +10,7 @@ on:
       sample:
         description: 'Make a sample design instead of processing orders'
         type: choice
-        options: [none, sticker, mug, poster]
+        options: [none, sticker, mug, poster, roulette-all, roulette-15, roulette-30, roulette-60]
         default: none
 
 permissions:
@@ -23,7 +23,7 @@ concurrency:
 jobs:
   design:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

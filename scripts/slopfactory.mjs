@@ -13,6 +13,8 @@
 //   OPENROUTER_SLOP_KEY   OpenRouter key for images (its own spending limit); falls back to OPENROUTER_API_KEY
 //   SLOP_IMAGE_MODEL   optional, comma-separated OpenRouter model ids (default below, then other image models it finds)
 //   SAMPLE=mug|sticker optional; make one sample design, upload it under samples/ and print its URL. No order involved.
+//   SAMPLE=roulette-all|roulette-15|roulette-30|roulette-60  one sample per active Budget Slop Roulette item
+//                      (all of them, or one budget tier), at that item's real size. No order, no Printful draft.
 //   PEEK=1             optional; exit 0 if there is work to do, 1 if not (lets the workflow skip installing sharp)
 //   DRY_RUN=1          optional, with SAMPLE: write the file locally instead of uploading it
 
@@ -219,20 +221,39 @@ async function work(o) {
   }
 }
 
+// One sample design: uploaded under samples/ and shown in the GitHub run summary. No order involved.
+async function sample(label, kind, file = label) {
+  const { idea, model, png } = await design(kind);
+  if (process.env.DRY_RUN) { await writeFile(`slop-sample-${file}.png`, png); log(`saved slop-sample-${file}.png`); return; }
+  const name = `samples/${Date.now()}-${file}-${randomBytes(6).toString('hex')}`;
+  const url = await upload(`${name}.png`, png);
+  // The full mug print file is too big for GitHub's image proxy, so the summary shows a small JPEG and links the original.
+  const { default: sharp } = await import('sharp');
+  const preview = await upload(`${name}-preview.jpg`, await sharp(png).resize({ width: 1200 }).jpeg({ quality: 82 }).toBuffer(), 'image/jpeg');
+  log(`sample ${label}:`, url);
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Slop sample: ${label}\n\n[![sample](${preview})](${url})\n\n[Full print file](${url}) · ${model}\n\n<details><summary>Prompt</summary>\n\n${idea.prompt}\n\n</details>\n\n`);
+}
+
+// Budget Slop Roulette samples: every active item (or one budget tier), each at its real print size.
+async function rouletteSamples(which) {
+  const tier = which.split('-')[1];
+  const items = await sbJson(`/rest/v1/roulette_items?active=is.true${/^\d+$/.test(tier) ? `&tier=eq.${tier}` : ''}&select=*&order=tier,id`);
+  if (!items?.length) throw new Error('no active roulette items');
+  let failed = 0;
+  for (const item of items) {
+    try { await sample(`${item.name} (€${item.tier} tier)`, kindOf({ roulette_item: item }), item.id); }
+    catch (e) { failed++; log(`sample ${item.id} failed:`, e.message); }
+  }
+  log(`${items.length - failed}/${items.length} roulette samples made`);
+  if (failed === items.length) throw new Error('every roulette sample failed');
+}
+
 async function main() {
   if (process.env.SAMPLE) {
+    if (process.env.SAMPLE.startsWith('roulette')) return rouletteSamples(process.env.SAMPLE);
     const label = ['mug', 'sticker', 'poster'].includes(process.env.SAMPLE) ? process.env.SAMPLE : 'sticker';
     const kind = label === 'poster' ? { w: 1772, h: 2362, aspect: '3:4', canvas: 'a portrait 30×40 cm wall poster' } : label;
-    const { idea, png } = await design(kind);
-    if (process.env.DRY_RUN) { await writeFile(`slop-sample-${label}.png`, png); log(`saved slop-sample-${label}.png`); return; }
-    const name = `samples/${Date.now()}-${randomBytes(6).toString('hex')}`;
-    const url = await upload(`${name}.png`, png);
-    // The full mug print file is too big for GitHub's image proxy, so the summary shows a small JPEG and links the original.
-    const { default: sharp } = await import('sharp');
-    const preview = await upload(`${name}-preview.jpg`, await sharp(png).resize({ width: 1200 }).jpeg({ quality: 82 }).toBuffer(), 'image/jpeg');
-    log('sample:', url);
-    if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Slop sample (${label})\n\n[![sample](${preview})](${url})\n\n[Full print file](${url})\n\n<details><summary>Prompt</summary>\n\n${idea.prompt}\n\n</details>\n`);
-    return;
+    return sample(label, kind);
   }
   if (!process.env.SUPABASE_SECRET_KEY) { log('not configured (SUPABASE_SECRET_KEY missing). Skipping.'); process.exit(process.env.PEEK ? 1 : 0); }
   const todo = await sbJson('/rest/v1/shop_orders?status=in.(slop_queued,slop_ready)&select=id,sku,status,slop_attempts,roulette_item&order=id&limit=5');
