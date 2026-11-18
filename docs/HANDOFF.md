@@ -20,7 +20,7 @@ Read this first in a new session, together with `README.md` and `docs/STORE-SETU
   - Payment goes through live PayPal; orders go to Printful and always arrive as drafts the owner confirms.
   - Outsiders see only a login: the password is checked server-side by the secret `SHOP_PASSWORD`.
 - **Slop Machine** (`scripts/slopfactory.mjs`, `.github/workflows/slop.yml`):
-  - Paid slop orders get an AI design from OpenRouter (key `OPENROUTER_SLOP_KEY`), with no banner or overlay (the mascot carries the brand), uploaded to the Storage bucket `slop`.
+  - Paid slop orders get an AI design from OpenRouter (key `OPENROUTER_SLOP_KEY`), with no banner or overlay (the model writes "SNELLHEID INDUSTRIES" itself; misspellings are a feature), uploaded to the Storage bucket `slop`.
   - The function's `place` action then creates the Printful draft.
   - The shop function triggers the workflow immediately (`GITHUB_DISPATCH_TOKEN`); the hourly Newsroom run is the fallback.
 - **Budget Slop Roulette** (`supabase/roulette.sql`):
