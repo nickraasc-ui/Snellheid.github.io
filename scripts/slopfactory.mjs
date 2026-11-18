@@ -3,7 +3,8 @@
 //
 // For each order the shop function left in status "slop_queued":
 //   1. roll a random over-the-top corporate concept and let an OpenRouter image model draw it, with our logo as reference;
-//   2. scale it to the product's exact print size (no banner or overlay: the mascot carries the brand);
+//   2. scale it to the product's exact print size. No banner or overlay: the model writes the company name itself,
+//      and its occasional misspellings are a feature;
 //   3. upload the print file to the public "slop" storage bucket;
 //   4. ask the shop function to place it at Printful, always as a draft, so a human looks at it before it's printed.
 // Failures go back to the queue and are retried next hour; after MAX_ATTEMPTS the order becomes "needs_attention".
@@ -91,6 +92,7 @@ export function concept(kind) {
     'It is official merchandise of Snellheid Industries™, a fictional, absurdly self-important mega-corporation. Its mascot is the snail with a rocket on its back shown in the attached image.',
     `Concept: ${idea.format}, about ${idea.theme}. Visual style: ${idea.style}.`,
     'Make the snail-rocket mascot the hero of the scene. Add one short, deadpan corporate slogan or title in big bold English lettering.',
+    'Somewhere prominent, also write the company name "SNELLHEID INDUSTRIES" in big lettering that fits the style.',
     'Go completely, ridiculously over the top: maximalist, epic, dramatic, overflowing with details, deranged corporate pride. Subtle is a fireable offence.',
     'Rules: everything must be original. No real company names, brands or logos other than Snellheid; no copyrighted characters; no real people, celebrities or politicians.',
     'Strictly family friendly: no nudity, nothing sexual, no blood or gore, no weapons aimed at anyone, no drugs, no hate symbols, no real tragedies. Any fighting is harmless cartoon slapstick.',
