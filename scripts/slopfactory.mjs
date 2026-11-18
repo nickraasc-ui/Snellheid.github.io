@@ -68,6 +68,22 @@ const FORMATS = [
   'a vintage travel poster for a destination that is actually a meeting room',
   'a cereal box for a breakfast cereal that "boosts KPIs"',
   'a souvenir postage stamp issued to celebrate a record-breaking quarter',
+  'an Egyptian tomb wall of hieroglyphs recording the rise and fall of a product launch',
+  'a Greek vase painting of an epic battle between two project management tools',
+  'a nature documentary still of the rare corporate creatures of the open-plan savannah',
+  'a 1950s B-movie poster: ATTACK OF THE 50-FOOT MIDDLE MANAGER',
+  'a fantasy RPG character sheet and boss battle against a final boss called The Q4 Forecast',
+  'a cursed board game box for "Corporate Ladder: The Game" with all its pieces',
+  'a wildly overdesigned birthday cake for the company\'s 1000th consecutive reorg',
+  'an exploded-view technical diagram of the snail-rocket, with absurd labelled parts',
+  'the cover of a self-help book written by the snail-rocket',
+  'a national banknote of the Snellheid Republic',
+  'a museum diorama of "Homo Corporatus in its natural habitat, circa 2025"',
+  'a classical marble sculpture garden of heroic employees in impossible poses',
+  'a Victorian circus poster for The Greatest Synergy On Earth',
+  'a breakfast-TV infomercial still for a gadget that schedules meetings about meetings',
+  'a map of a fantasy kingdom whose regions are departments, with dragons labelled Compliance',
+  'a space-race propaganda poster for the first open-plan office on the Moon',
 ];
 const STYLES = [
   '1987 airbrushed chrome', 'Soviet constructivist poster', 'baroque oil painting with extreme chiaroscuro', 'vaporwave',
@@ -75,6 +91,10 @@ const STYLES = [
   '1990s Saturday morning cartoon', 'hyper-real 3D render with far too many lens flares', 'rococo pastel extravagance',
   'Art Nouveau with ornate borders', 'pixel art', 'velvet blacklight painting', 'embroidered patch', 'retro sci-fi pulp magazine cover',
   'Renaissance fresco', 'holographic foil trading card', 'MS Paint on a 1998 office PC', 'Lisa-Frank-style neon rainbow',
+  'claymation', 'woven Persian carpet', 'Mexican lucha libre poster', 'Mughal miniature painting', 'Bauhaus geometric',
+  '1930s rubber-hose cartoon', 'Dutch Golden Age still life', 'airport duty-free luxury advertisement', 'thermal-printer receipt',
+  'Lego-like plastic brick diorama', 'cross-stitch sampler', 'neon sign on a brick wall at night', 'ancient Roman mosaic',
+  'children\'s crayon drawing taken far too seriously', 'Edo-period scroll', 'Wes-Anderson-style symmetrical pastel diorama',
 ];
 const THEMES = [
   'synergy', '"we\'re not a company, we\'re a family" (announced right before layoffs)', 'circling back', 'KPIs and OKRs',
@@ -82,18 +102,51 @@ const THEMES = [
   'the meeting that could have been an email', '"per my last email"', 'reply-all apocalypse', '4am cold plunges and hustle culture',
   'stakeholder alignment', 'thought leadership', 'low-hanging fruit', 'moving fast and circling back', 'headcount optimization',
   'the open-plan office', 'quarterly earnings', 'disruption', '"let\'s take this offline"', 'being a 10x rockstar ninja',
+  'the all-hands meeting', 'the annual performance review', 'bring your whole self to work', 'the office coffee machine',
+  'the company offsite', 'the org chart', 'the expense report', 'the LinkedIn humblebrag', 'the out-of-office reply',
+  'the team-building escape room', 'the hot desk', 'the slide deck with 140 slides',
 ];
+// Absurd extra ingredients: every design gets two, so even the same format never comes out the same twice.
+const TWISTS = [
+  'the whole scene takes place inside a giant snow globe', 'everyone in it is a Roman senator', 'it is set on the surface of the Moon',
+  'a giant squid is clearly the real CEO', 'every character is wearing a lanyard with an ID badge', 'there is a marching band',
+  'it is raining sticky notes', 'a volcano is erupting coffee', 'everything is happening underwater',
+  'a tiny bureaucrat is stamping documents in the corner', 'the background is full of pigeons in tiny business suits',
+  'there are fireworks shaped like pie charts', 'a dragon is guarding a printer', 'the snail-rocket rides a majestic horse',
+  'it is all inside a fish tank on someone\'s desk', 'a choir of identical interns is singing', 'a meteor shaped like a calendar invite is approaching',
+  'everything is made of cake', 'there are far too many potted plants', 'a laser show spells out quarterly numbers',
+  'an ancient prophecy scroll unrolls across the scene', 'a submarine periscope is watching from below', 'cats in hard hats are supervising',
+  'it is the grand finale of a fireworks show', 'a parade float carries an enormous trophy', 'the sky is a giant spreadsheet',
+  'a lighthouse beams a progress bar', 'there is a tiny snail-rocket hidden in every corner', 'the clouds form the shape of an org chart',
+  'a herd of runaway office chairs stampedes through', 'everyone is riding a unicycle', 'it is lit like a stadium rock concert',
+];
+
+// Deal from shuffled decks instead of rolling dice, so a batch never repeats a pick until the deck runs out.
+// RECENT holds the prompts of the last orders; picks that appear in them are skipped while there are alternatives.
+let RECENT = '';
+const decks = new Map();
+function deal(list) {
+  let deck = decks.get(list);
+  if (!deck?.length) {
+    deck = [...list].sort(() => Math.random() - 0.5);
+    decks.set(list, deck);
+  }
+  const i = Math.max(0, deck.findIndex((x) => !RECENT.includes(x)));
+  return deck.splice(i, 1)[0];
+}
 
 export function concept(kind) {
   const k = specOf(kind);
-  const idea = { format: pick(FORMATS), style: pick(STYLES), theme: pick(THEMES) };
+  const idea = { format: deal(FORMATS), style: deal(STYLES), theme: deal(THEMES), twists: [deal(TWISTS), deal(TWISTS)] };
   const prompt = [
     `Create original artwork for ${k.canvas}.`,
     'It is official merchandise of Snellheid Industries™, a fictional, absurdly self-important mega-corporation. Its mascot is the snail with a rocket on its back shown in the attached image.',
     `Concept: ${idea.format}, about ${idea.theme}. Visual style: ${idea.style}.`,
+    `Twists: ${idea.twists[0]}; and ${idea.twists[1]}.`,
     'Make the snail-rocket mascot the hero of the scene. Add one short, deadpan corporate slogan or title in big bold English lettering.',
     'Somewhere prominent, also write the company name "SNELLHEID INDUSTRIES" in big lettering that fits the style.',
     'Go completely, ridiculously over the top: maximalist, epic, dramatic, overflowing with details, deranged corporate pride. Subtle is a fireable offence.',
+    'Escalate: take the concept, then make it three times more absurd. Fill the background with at least five small sight gags that reward a second look. Commit to the bit with total seriousness.',
     'Rules: everything must be original. No real company names, brands or logos other than Snellheid; no copyrighted characters; no real people, celebrities or politicians.',
     'Strictly family friendly: no nudity, nothing sexual, no blood or gore, no weapons aimed at anyone, no drugs, no hate symbols, no real tragedies. Any fighting is harmless cartoon slapstick.',
     'Flat print artwork only, filling the whole canvas edge to edge: no border, no mug or sticker mockup, no product photo.',
@@ -190,7 +243,7 @@ function kindOf(o) {
 
 async function design(kind) {
   const idea = concept(kind);
-  log(`concept: ${idea.format.split('(')[0].trim()} | ${idea.theme} | ${idea.style}`);
+  log(`concept: ${idea.format.split('(')[0].trim()} | ${idea.theme} | ${idea.style} | ${idea.twists.join(' + ')}`);
   const art = await draw(kind, idea);
   return { idea, model: art.model, png: await printFile(kind, art.buf) };
 }
@@ -256,6 +309,9 @@ async function main() {
   if (process.env.PEEK) { log(`${todo.length} slop order(s) waiting`); process.exit(todo.length ? 0 : 1); }
   if (!todo.length) return log('nothing to make');
   if (!process.env.OPENROUTER_SLOP_KEY && !process.env.OPENROUTER_API_KEY) throw new Error('Missing env OPENROUTER_SLOP_KEY');
+  // Remember the last orders' concepts, so two friends ordering the same week don't get the same idea.
+  const recent = await sbJson('/rest/v1/shop_orders?slop_prompt=not.is.null&select=slop_prompt&order=id.desc&limit=10').catch(() => []);
+  RECENT = (recent ?? []).map((r) => r.slop_prompt).join('\n');
   for (const o of todo) {
     if (o.status === 'slop_queued') await work(o);
     try { await place(o.id); } catch (e) { log(`order ${o.id} not placed yet:`, e.message); }
