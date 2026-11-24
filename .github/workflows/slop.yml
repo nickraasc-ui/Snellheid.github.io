@@ -29,7 +29,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npm install --no-save --no-package-lock --no-audit --no-fund sharp@0.34.4
+      # Exact versions from scripts/package-lock.json, install scripts off, and no secrets in this step.
+      - run: npm ci --prefix scripts --ignore-scripts --no-audit --no-fund
       - run: node scripts/slopfactory.mjs
         env:
           SAMPLE: ${{ inputs.sample != 'none' && inputs.sample || '' }}

@@ -90,6 +90,8 @@ function clientIp(req: Request) {
 async function checkPassword(given: unknown, ip: string) {
   const want = env("SHOP_PASSWORD");
   if (!want) return; // no password set: open store
+  // Clear guess records older than a day on every visit, not only when someone types a password. Best effort.
+  await db(`shop_auth_fails?at=lt.${new Date(Date.now() - 86_400_000).toISOString()}`, { method: "DELETE" }).catch(() => {});
   // No password typed (e.g. the page's automatic check on a first visit) isn't a guess, so it doesn't count.
   if (typeof given !== "string" || !given.trim() || given.length > 200) throw new Fail(401, "wrong password");
   const who = (await sha(`snel-shop|${ip}`)).slice(0, 32);
@@ -149,7 +151,26 @@ async function capture(orderID: unknown) {
   });
   if (!claimed?.length) return { status: "processing" };
 
+  // From here on the buyer may have paid. Any unexpected error (PayPal timeout, database hiccup) flags the order for a
+  // human, instead of leaving it in "capturing", where nothing would ever look at it again.
+  try {
+    return await captureClaimed(o, orderID);
+  } catch (e) {
+    if (!(e instanceof Fail)) {
+      await db(`shop_orders?id=eq.${o.id}&status=in.(capturing,paid)`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "needs_attention", note: `capture interrupted (${String(e).slice(0, 200)}); check in PayPal whether this order was paid` }),
+      }).catch((err) => console.error("could not flag order", o.id, err));
+    }
+    throw e;
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function captureClaimed(o: { id: number; [k: string]: any }, orderID: string) {
   const res = await paypal(`/v2/checkout/orders/${orderID}/capture`, {}, `capture-${orderID}`);
+  // A PayPal server error says nothing about whether the money moved: that's for a human to check, not "failed".
+  if (res.status >= 500) throw new Error(`paypal capture ${res.status}`);
   const unit = res.d.purchase_units?.[0];
   const cap = unit?.payments?.captures?.[0];
   if (!res.ok || res.d.status !== "COMPLETED" || cap?.status !== "COMPLETED") {

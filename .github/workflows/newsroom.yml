@@ -52,13 +52,19 @@ jobs:
           HEADLINE_URL: ${{ inputs.headline_url }}
           HEADLINE_SOURCE: ${{ inputs.headline_source }}
       # Slop Machine™: designs paid mystery-merch orders (scripts/slopfactory.mjs). Runs even if the article step failed.
-      - name: Slop Machine
+      - name: Slop orders waiting?
+        id: peek
         if: always()
-        run: |
-          if PEEK=1 node scripts/slopfactory.mjs; then
-            npm install --no-save --no-package-lock --no-audit --no-fund sharp@0.34.4
-            node scripts/slopfactory.mjs
-          fi
+        run: if PEEK=1 node scripts/slopfactory.mjs; then echo "todo=1" >> "$GITHUB_OUTPUT"; fi
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      # Exact versions from scripts/package-lock.json, install scripts off, and no secrets in this step.
+      - name: Install image tools
+        if: always() && steps.peek.outputs.todo == '1'
+        run: npm ci --prefix scripts --ignore-scripts --no-audit --no-fund
+      - name: Slop Machine
+        if: always() && steps.peek.outputs.todo == '1'
+        run: node scripts/slopfactory.mjs
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_SLOP_KEY: ${{ secrets.OPENROUTER_SLOP_KEY }}

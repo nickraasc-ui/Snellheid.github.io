@@ -1,5 +1,6 @@
 // Snellheid Slop Machine™ — designs one-of-a-kind AI merch for paid "slop" orders.
-// Runs in the hourly Newsroom workflow. Node 22+ and sharp (installed by the workflow).
+// Runs in the hourly Newsroom workflow and in slop.yml. Node 22+ and sharp, from scripts/package-lock.json
+// (npm ci --prefix scripts --ignore-scripts).
 //
 // For each order the shop function left in status "slop_queued":
 //   1. roll a random over-the-top corporate concept and let an OpenRouter image model draw it, with our logo as reference;
@@ -202,7 +203,8 @@ async function draw(kind, idea) {
       });
       const d = await r.json().catch(() => ({}));
       // A real key is "sk-or-v1-" + 64 hex characters; show only its shape, never the key.
-      if (r.status === 401) throw new Error(`401 ${JSON.stringify(d.error || d).slice(0, 120)} — key starts with "${key.slice(0, 9)}", ${key.length} chars (a valid one starts with "sk-or-v1-" and has 73)`);
+      // Never print any part of the key (logs are public): only whether its shape is right.
+      if (r.status === 401) throw new Error(`401 ${JSON.stringify(d.error || d).slice(0, 120)} — key ${key.startsWith('sk-or-v1-') ? 'has' : 'does NOT have'} the "sk-or-v1-" prefix, ${key.length} chars (a valid one has 73)`);
       if (!r.ok) throw new Error(`${r.status} ${JSON.stringify(d.error || d).slice(0, 200)}`);
       const url = d.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (!url) throw new Error(`no image in reply: ${JSON.stringify(d.choices?.[0]?.message?.content || d).slice(0, 200)}`);
@@ -260,7 +262,7 @@ async function work(o) {
     await sbJson(`/rest/v1/shop_orders?id=eq.${o.id}`, { method: 'PATCH', body: JSON.stringify({
       status: 'slop_ready', print_file_url: url, slop_prompt: `[${model}] ${idea.prompt}`,
     }) });
-    log(`order ${o.id} designed: ${url}`);
+    log(`order ${o.id} designed`); // no URL: Actions logs are public and the design is a surprise
   } catch (e) {
     const attempts = (o.slop_attempts || 0) + 1;
     await sbJson(`/rest/v1/shop_orders?id=eq.${o.id}`, { method: 'PATCH', body: JSON.stringify({
